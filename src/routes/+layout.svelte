@@ -2,6 +2,7 @@
     import UserStatus from '$lib/components/UserStatus.svelte';
     import Navigation from '$lib/components/Navigation.svelte';
     import ThemeProvider from '$lib/components/ThemeProvider.svelte';
+    import ShoppingCart from '$lib/components/ShoppingCart.svelte';
 
     const { children, data } = $props();
     const { user, profile } = data;
@@ -22,6 +23,11 @@
 	</div>
 
     {@render children()}
+    
+    <ShoppingCart on:checkout={() => {
+        // Navigate to checkout page
+        window.location.href = '/checkout';
+    }} />
 </main>
 
 <style>

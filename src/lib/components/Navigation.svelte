@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from '$app/state';
   import ThemeToggle from './ThemeToggle.svelte';
+  import CartIcon from './CartIcon.svelte';
   
   const { user } = $props();
   
@@ -36,6 +37,7 @@
           Admin
         </a>
       {/if}
+      <CartIcon />
       <ThemeToggle />
     </div>
   </div>

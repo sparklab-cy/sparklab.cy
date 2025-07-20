@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { enhance } from '$app/forms';
+  import { cart } from '$lib/stores/cart';
   import type { Kit, CustomCourse } from '$lib/types/courses';
   
   const { data, form } = $props();
@@ -43,6 +44,17 @@
         return 0;
     }
   }));
+  
+  function addToCart(kit: Kit) {
+    cart.addItem({
+      id: kit.id,
+      type: 'kit',
+      name: kit.name,
+      price: kit.price,
+      image: kit.image_url,
+      description: kit.description
+    });
+  }
   
   function purchaseCommunityCourse(courseId: string) {
     // TODO: Implement payment logic
@@ -145,12 +157,21 @@
                 {#if hasKitAccess(kit.id)}
                   <div class="owned-badge">✓ Owned</div>
                 {:else}
-                  <form method="POST" action="?/purchaseKit" use:enhance>
-                    <input type="hidden" name="kitId" value={kit.id} />
-                    <button type="submit" class="purchase-btn">
-                      Purchase Kit
+                  <div class="purchase-options">
+                    <button 
+                      type="button" 
+                      class="add-to-cart-btn"
+                      on:click={() => addToCart(kit)}
+                    >
+                      Add to Cart
                     </button>
-                  </form>
+                    <form method="POST" action="?/purchaseKit" use:enhance>
+                      <input type="hidden" name="kitId" value={kit.id} />
+                      <button type="submit" class="purchase-btn">
+                        Buy Now
+                      </button>
+                    </form>
+                  </div>
                 {/if}
               </div>
             </div>
@@ -372,6 +393,31 @@
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
+  }
+  
+  .purchase-options {
+    display: flex;
+    gap: 0.5rem;
+    width: 100%;
+  }
+  
+  .add-to-cart-btn {
+    padding: 12px 24px;
+    background: var(--secondary-background);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+    flex: 1;
+  }
+  
+  .add-to-cart-btn:hover {
+    background: var(--border);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
   }
   
   .view-details-btn {

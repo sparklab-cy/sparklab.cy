@@ -1,11 +1,10 @@
-// src/lib/components/DynamicLesson.svelte
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { LessonContent } from '$lib/types/courses';
   
   const { lessonContent } = $props();
   
-  let componentElement: HTMLElement;
+  let componentElement: HTMLElement = $state(new HTMLElement());
   let componentInstance: any;
   
   onMount(() => {

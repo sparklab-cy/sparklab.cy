@@ -8,7 +8,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
   try {
     // Load course
     const { data: courseData, error: courseError } = await supabase
-      .from('official_courses')
+      .from('custom_courses')
       .select('*')
       .eq('id', courseId)
       .single();
@@ -128,7 +128,7 @@ export const actions: Actions = {
           user_id: user.id,
           lesson_id: lessonId,
           course_id: courseId,
-          course_type: 'official',
+          course_type: 'community',
           status: 'completed',
           completed_at: new Date().toISOString()
         });

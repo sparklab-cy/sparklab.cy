@@ -34,7 +34,7 @@
     {lessons} 
     currentLesson={lesson} 
     userProgress={userProgress} 
-    courseType="official" 
+    courseType="community" 
     courseId={course.id}
   >
     <div class="lesson-content">
@@ -196,4 +196,4 @@
     border-radius: 8px;
     margin: 2rem;
   }
-</style>
+</style> 
