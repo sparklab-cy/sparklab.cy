@@ -1,13 +1,19 @@
 // src/routes/auth/google/+server.ts
 import { redirect, type RequestHandler } from '@sveltejs/kit';
+import { PUBLIC_SITE_URL } from '$env/static/public';
 
-export const GET: RequestHandler = async ({ locals }) => {
+export const GET: RequestHandler = async ({ locals, url }) => {
 	const { supabase } = locals;
+
+	// Use environment variable or construct from request URL
+	const redirectUrl = PUBLIC_SITE_URL 
+		? `${PUBLIC_SITE_URL}/auth/callback`
+		: `${url.origin}/auth/callback`;
 
 	const { data, error } = await supabase.auth.signInWithOAuth({
 		provider: 'google',
 		options: {
-			redirectTo: 'http://localhost:5173/auth/callback' // replace with your real URL in prod
+			redirectTo: redirectUrl
 		}
 	});
 

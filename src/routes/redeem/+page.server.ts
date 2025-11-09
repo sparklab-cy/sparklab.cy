@@ -30,7 +30,7 @@ export const actions: Actions = {
         return { success: false, error: 'Please enter a valid code' };
       }
 
-      // Find the kit code
+      // Find the kit code - only get unused codes to prevent race conditions
       const { data: kitCode, error: codeError } = await supabase
         .from('kit_codes')
         .select(`
@@ -38,14 +38,11 @@ export const actions: Actions = {
           kit:kits(id, name, theme, level, price)
         `)
         .eq('code', code.trim())
+        .eq('is_used', false) // Only get unused codes
         .single();
 
       if (codeError || !kitCode) {
         return { success: false, error: 'Invalid or expired code' };
-      }
-
-      if (kitCode.is_used) {
-        return { success: false, error: 'This code has already been used' };
       }
 
       if (kitCode.expires_at && new Date(kitCode.expires_at) < new Date()) {
@@ -65,18 +62,22 @@ export const actions: Actions = {
         return { success: false, error: 'You already have access to this kit' };
       }
 
-      // Mark the code as used
-      const { error: updateError } = await supabase
+      // Mark the code as used - use is_used check in WHERE clause to prevent race conditions
+      const { error: updateError, data: updatedCode } = await supabase
         .from('kit_codes')
         .update({
           is_used: true,
           used_by: user.id,
           used_at: new Date().toISOString()
         })
-        .eq('id', kitCode.id);
+        .eq('id', kitCode.id)
+        .eq('is_used', false) // Critical: Only update if still unused (prevents race condition)
+        .select()
+        .single();
 
-      if (updateError) {
-        return { success: false, error: 'Failed to redeem code' };
+      if (updateError || !updatedCode) {
+        // Code was already used by another request
+        return { success: false, error: 'This code has already been used' };
       }
 
       // Grant permission to the user
