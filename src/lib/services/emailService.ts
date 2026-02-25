@@ -1,13 +1,20 @@
 // src/lib/services/emailService.ts
-import { supabase } from '$lib/supabaseClient';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { supabase as defaultSupabase } from '$lib/supabaseClient';
 import type { EmailTemplate, EmailLog, Purchase, Kit } from '$lib/types/courses';
 
 export class EmailService {
+  private supabase: SupabaseClient;
+
+  constructor(supabaseClient?: SupabaseClient) {
+    this.supabase = supabaseClient || defaultSupabase;
+  }
+
   // Send purchase confirmation email
   async sendPurchaseConfirmation(purchase: Purchase, kit: Kit, userEmail: string, userName: string) {
     try {
       // Get or create purchase confirmation template
-      let template = await this.getEmailTemplate('purchase_confirmation');
+      let template = await this.getEmailTemplate('purchase_confirmation', this.supabase);
       
       if (!template) {
         template = await this.createDefaultPurchaseTemplate();
@@ -47,7 +54,7 @@ export class EmailService {
         subject,
         content: htmlContent,
         status: 'pending'
-      });
+      }, this.supabase);
 
       // Send the email (integrate with your email provider)
       await this.sendEmail(userEmail, subject, htmlContent, textContent);
@@ -62,7 +69,7 @@ export class EmailService {
   // Send kit code redemption confirmation
   async sendCodeRedemptionConfirmation(kit: Kit, userEmail: string, userName: string) {
     try {
-      let template = await this.getEmailTemplate('code_redemption');
+      let template = await this.getEmailTemplate('code_redemption', this.supabase);
       
       if (!template) {
         template = await this.createDefaultCodeRedemptionTemplate();
@@ -102,19 +109,23 @@ export class EmailService {
   }
 
   // Get email template by name
-  async getEmailTemplate(name: string): Promise<EmailTemplate | null> {
-    const { data, error } = await supabase
-      .from('email_templates')
-      .select('*')
-      .eq('name', name)
-      .single();
+  async getEmailTemplate(name: string, client?: SupabaseClient): Promise<EmailTemplate | null> {
+    const clientToUse = client || this.supabase;
+    // Use database function to bypass RLS
+    const { data, error } = await clientToUse.rpc('get_email_template', {
+      p_name: name
+    });
 
     if (error) {
       console.error('Failed to get email template:', error);
       return null;
     }
 
-    return data;
+    if (!data || data.length === 0) {
+      return null;
+    }
+
+    return data[0] as EmailTemplate;
   }
 
   // Create default purchase confirmation template
@@ -138,7 +149,7 @@ export class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <h1>🎉 Welcome to Electrofun!</h1>
+              <h1>Welcome to Electrofun!</h1>
             </div>
             <div class="content">
               <h2>Hi {userName},</h2>
@@ -159,7 +170,7 @@ export class EmailService {
                 <a href="{coursesUrl}" class="button">Start Learning</a>
               </div>
               
-              <p>Happy building! 🚀</p>
+              <p>Happy building!</p>
               <p>- The Electrofun Team</p>
             </div>
             <div class="footer">
@@ -193,14 +204,26 @@ export class EmailService {
       variables: ['kitName', 'kitTheme', 'kitLevel', 'userName', 'purchaseDate', 'amount', 'coursesUrl']
     };
 
-    const { data, error } = await supabase
-      .from('email_templates')
-      .insert(template)
-      .select()
-      .single();
+    // Use database function to bypass RLS
+    const { data: templateId, error } = await this.supabase.rpc('create_email_template', {
+      p_name: template.name,
+      p_subject: template.subject,
+      p_html_content: template.html_content,
+      p_text_content: template.text_content,
+      p_variables: template.variables || []
+    });
 
     if (error) throw error;
-    return data;
+    
+    // Fetch the created template
+    const { data: createdTemplate, error: fetchError } = await this.supabase
+      .from('email_templates')
+      .select('*')
+      .eq('name', template.name)
+      .single();
+    
+    if (fetchError) throw fetchError;
+    return createdTemplate;
   }
 
   // Create default code redemption template
@@ -224,7 +247,7 @@ export class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <h1>🔓 Kit Unlocked!</h1>
+              <h1>Kit Unlocked!</h1>
             </div>
             <div class="content">
               <h2>Hi {userName},</h2>
@@ -244,7 +267,7 @@ export class EmailService {
                 <a href="{coursesUrl}" class="button">Start Learning</a>
               </div>
               
-              <p>Happy building! 🚀</p>
+              <p>Happy building!</p>
               <p>- The Electrofun Team</p>
             </div>
             <div class="footer">
@@ -278,14 +301,26 @@ export class EmailService {
       variables: ['kitName', 'kitTheme', 'kitLevel', 'userName', 'redemptionDate', 'coursesUrl']
     };
 
-    const { data, error } = await supabase
-      .from('email_templates')
-      .insert(template)
-      .select()
-      .single();
+    // Use database function to bypass RLS
+    const { data: templateId, error } = await this.supabase.rpc('create_email_template', {
+      p_name: template.name,
+      p_subject: template.subject,
+      p_html_content: template.html_content,
+      p_text_content: template.text_content,
+      p_variables: template.variables || []
+    });
 
     if (error) throw error;
-    return data;
+    
+    // Fetch the created template
+    const { data: createdTemplate, error: fetchError } = await this.supabase
+      .from('email_templates')
+      .select('*')
+      .eq('name', template.name)
+      .single();
+    
+    if (fetchError) throw fetchError;
+    return createdTemplate;
   }
 
   // Replace variables in template
@@ -298,10 +333,17 @@ export class EmailService {
   }
 
   // Log email
-  async logEmail(logData: Partial<EmailLog>): Promise<void> {
-    const { error } = await supabase
-      .from('email_logs')
-      .insert(logData);
+  async logEmail(logData: Partial<EmailLog>, client?: SupabaseClient): Promise<void> {
+    const clientToUse = client || this.supabase;
+    // Use database function to bypass RLS
+    const { error } = await clientToUse.rpc('log_email', {
+      p_user_id: logData.user_id || null,
+      p_template_id: logData.template_id || null,
+      p_to_email: logData.to_email || '',
+      p_subject: logData.subject || '',
+      p_content: logData.content || '',
+      p_status: logData.status || 'pending'
+    });
 
     if (error) {
       console.error('Failed to log email:', error);

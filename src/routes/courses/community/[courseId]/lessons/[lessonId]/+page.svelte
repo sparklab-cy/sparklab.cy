@@ -45,7 +45,7 @@
             <span class="duration">Estimated time: {lesson.estimated_duration} minutes</span>
           {/if}
           {#if currentLessonProgress?.status === 'completed'}
-            <span class="completed">✓ Completed</span>
+            <span class="completed">Completed</span>
           {/if}
         </div>
       </div>
@@ -83,7 +83,7 @@
             </button>
           </form>
         {:else}
-          <button class="completed-btn" disabled>✓ Completed</button>
+          <button class="completed-btn" disabled>Completed</button>
         {/if}
       </div>
     </div>

@@ -65,7 +65,7 @@
         </div>
         
         <div class="info-card">
-          <h3>📝 Course Creation Guidelines</h3>
+          <h3>Course Creation Guidelines</h3>
           <ul>
             <li>You can only create courses for kits you own</li>
             <li>Courses start as drafts - you can publish them when ready</li>

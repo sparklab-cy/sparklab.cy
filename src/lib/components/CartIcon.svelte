@@ -30,29 +30,30 @@
   .cart-icon {
     position: relative;
     background: none;
-    border: none;
-    color: var(--text);
+    border: var(--border-width) solid var(--color-text);
+    border-radius: 8px;
     cursor: pointer;
     padding: 0.5rem;
-    border-radius: 8px;
-    transition: all 0.2s;
     display: flex;
     align-items: center;
     justify-content: center;
+    color: var(--color-text);
+    transition: all 0.2s ease;
   }
   
   .cart-icon:hover {
-    background: var(--secondary-background);
-    color: var(--primary-color);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    background: rgba(94, 96, 206, 0.05);
   }
   
   .cart-badge {
     position: absolute;
     top: 0;
     right: 0;
-    background: var(--primary-color);
-    color: white;
-    font-size: 0.75rem;
+    background: var(--color-primary);
+    color: var(--color-background);
+    font-size: var(--font-size);
     font-weight: 600;
     min-width: 18px;
     height: 18px;
@@ -62,5 +63,6 @@
     justify-content: center;
     padding: 0 4px;
     transform: translate(50%, -50%);
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
-</style> 
+</style>

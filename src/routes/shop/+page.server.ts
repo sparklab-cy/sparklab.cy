@@ -1,5 +1,5 @@
 import type { PageServerLoad, Actions } from './$types';
-import { emailService } from '$lib/services/emailService';
+import { EmailService } from '$lib/services/emailService';
 
 export const load: PageServerLoad = async ({ locals }) => {
   const { user, supabase } = locals;
@@ -103,6 +103,7 @@ export const actions: Actions = {
           .single();
 
         if (kit) {
+          const emailService = new EmailService(supabase);
           await emailService.sendPurchaseConfirmation(
             purchase,
             kit,

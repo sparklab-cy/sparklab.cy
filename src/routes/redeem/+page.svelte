@@ -30,7 +30,7 @@
     
     {#if form?.message}
       <div class="success">
-        <h3>🎉 {form.message}</h3>
+        <h3>{form.message}</h3>
         {#if form.kit}
           <p>You now have access to <strong>{form.kit.name}</strong> (Level {form.kit.level})</p>
           <a href="/courses" class="button">View Courses</a>
@@ -44,7 +44,7 @@
     
     <div class="redeem-options">
       <div class="option-card">
-        <h3>📝 Enter Code Manually</h3>
+        <h3>Enter Code Manually</h3>
         <form method="POST" action="?/redeemCode" use:enhance>
           <div class="input-group">
             <input 
@@ -61,7 +61,7 @@
       </div>
       
       <div class="option-card">
-        <h3>📱 Scan QR Code</h3>
+        <h3>Scan QR Code</h3>
         <p>Scan the QR code from your kit packaging</p>
         <button class="scan-btn" on:click={toggleQRScanner}>
           {showQRScanner ? 'Cancel Scan' : 'Start QR Scanner'}

@@ -37,7 +37,28 @@
         height: 100vh;
         gap: 10px;
 	}
+
+	input {
+		padding: 0.5rem;
+		border: 1px solid #ccc;
+		border-radius: 4px;
+	}
+
+	button {
+		padding: 0.5rem 1rem;
+		border: 1px solid #000;
+		border-radius: 4px;
+		cursor: pointer;
+		background: #fff;
+	}
+
+	a {
+		color: #000;
+		text-decoration: underline;
+	}
+
 	.error {
-		color: red;
+		color: #000;
+		font-weight: bold;
 	}
 </style>

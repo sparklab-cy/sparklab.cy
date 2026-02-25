@@ -8,10 +8,10 @@
 		faArrowRightFromBracket,
 		faTerminal,
 		faInfo,
-		faUser
+		faUser,
+		faKeyboard,
+		faChalkboardUser
 	} from '@fortawesome/free-solid-svg-icons';
-
-    import { getCurrentTheme, getColors } from '$lib/colors';
 
 	let showMenu = $state(false);
 
@@ -45,15 +45,23 @@
 
 <div class="user-container">
 	{#if loggedIn}
-		<img
-			src={avatar_url ?? '/default-profile.png'}
-			alt="Profile"
-			class="profile-icon"
+		<button
+			type="button"
+			class="profile-icon-button"
 			onclick={toggleMenu}
-		/>
+			aria-label="Toggle user menu"
+			aria-expanded={showMenu}
+			aria-haspopup="true"
+		>
+			<img
+				src={avatar_url ?? '/default-profile.png'}
+				alt="Profile"
+				class="profile-icon"
+			/>
+		</button>
 
 		{#if showMenu}
-			<div class="dropdown-menu">
+			<div class="dropdown-menu" role="menu" aria-label="User menu">
 				<div class="user-name">
 					{full_name ?? email}
 					<br />
@@ -61,25 +69,33 @@
 				</div>
 				<hr style="margin: 0.4rem 1rem;" />
 
-				<div class="dropdown-item" onclick={() => goto('/profile')}>
+				<button type="button" class="dropdown-item" onclick={() => goto('/profile')} role="menuitem">
 					<FontAwesomeIcon icon={faUser} /> View Profile
-				</div>
-				<div class="dropdown-item" onclick={() => goto('/settings')}>
+				</button>
+				<button type="button" class="dropdown-item" onclick={() => goto('/settings')} role="menuitem">
 					<FontAwesomeIcon icon={faGear} /> Settings
-				</div>
+				</button>
+
+				<button type="button" class="dropdown-item" onclick={() => goto('/courses')} role="menuitem">
+					<FontAwesomeIcon icon={faChalkboardUser} /> My Courses
+				</button>
+
+				<button type="button" class="dropdown-item" onclick={() => goto('/redeem')} role="menuitem">
+					<FontAwesomeIcon icon={faKeyboard} /> Redeem Code
+				</button>
 
 				{#if role === 'admin'}
-					<div class="dropdown-item" onclick={() => goto('/admin')}>
+					<button type="button" class="dropdown-item" onclick={() => goto('/admin')} role="menuitem">
 						<FontAwesomeIcon icon={faTerminal} /> Admin Dashboard
-					</div>
+					</button>
 				{/if}
 
-				<div class="dropdown-item" onclick={() => goto('/support')}>
+				<button type="button" class="dropdown-item" onclick={() => goto('/support')} role="menuitem">
 					<FontAwesomeIcon icon={faInfo} /> Help/Support
-				</div>
-				<div class="dropdown-item" onclick={logout}>
+				</button>
+				<button type="button" class="dropdown-item" onclick={logout} role="menuitem">
 					<FontAwesomeIcon icon={faArrowRightFromBracket} /> Log Out
-				</div>
+				</button>
 			</div>
 		{/if}
 	{:else}
@@ -98,52 +114,90 @@
 		display: inline-block;
 	}
 
+	.profile-icon-button {
+		background: none;
+		border: none;
+		padding: 0;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transition: transform 0.2s ease;
+	}
+
+	.profile-icon-button:hover {
+		transform: scale(1.05);
+	}
+
+	.profile-icon-button:focus {
+		outline: 2px solid var(--color-primary);
+		outline-offset: 2px;
+		border-radius: 50%;
+	}
+
 	.profile-icon {
 		width: 40px;
 		height: 40px;
 		border-radius: 50%;
-		border: 1px solid var(--border);
-		cursor: pointer;
+		border: var(--border-width) solid var(--color-secondary);
 		object-fit: cover;
+		transition: border-color 0.2s ease;
+		pointer-events: none;
+	}
+
+	.profile-icon-button:hover .profile-icon {
+		border-color: var(--color-primary);
 	}
 
 	.login-button {
 		padding: 6px 12px;
-		font-size: 14px;
-		background-color: var(--primary-color);
-		border: 1px solid var(--border);
-		border-radius: 4px;
+		font-size: var(--font-size);
+		border: var(--border-width) solid var(--color-primary);
+		border-radius: 8px;
 		cursor: pointer;
-		border: none;
-		color: white;
-		aspect-ratio: 17/9;
-		width: 5vw;
+		background: var(--color-background);
+		color: var(--color-text);
+		transition: all 0.2s ease;
+	}
+
+	.login-button:hover {
+		background: var(--color-primary);
+		color: var(--color-background);
 	}
 
 	.dropdown-menu {
 		position: absolute;
 		top: 45px;
 		right: 0;
-		background-color: var(--surface);
-		border-radius: 7px;
-		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+		background: var(--secondary-background);
+		border-radius: 8px;
+		border: var(--border-width) solid var(--border);
 		z-index: 100;
 		width: 15vw;
 		padding-top: 4px;
-		color: var(--text);
-		font-size: 1rem;
-		border: 1px solid var(--border);
+		font-size: var(--font-size);
 	}
 
 	.user-name {
 		padding: 8px 16px;
 		font-weight: bold;
+		color: var(--color-text);
+		overflow: hidden;
 	}
 
 	.dropdown-item {
-		padding: 10px 16px;
+		width: 100%;
+		padding: 5px 16px;
+		text-align: left;
+		border: none;
+		background: none;
 		cursor: pointer;
-		transition: all 300ms ease;
+		color: var(--color-text);
+		transition: all 0.2s ease;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: var(--font-size);
 	}
 
 	.dropdown-item:last-child {
@@ -151,7 +205,13 @@
 	}
 
 	.dropdown-item:hover {
-		background-color: var(--secondary-background);
-		color: var(--text);
+		background: rgba(94, 96, 206, 0.1);
+		color: var(--color-primary);
+	}
+
+	.dropdown-item:focus {
+		outline: 2px solid var(--color-primary);
+		outline-offset: -2px;
+		background: rgba(94, 96, 206, 0.1);
 	}
 </style>

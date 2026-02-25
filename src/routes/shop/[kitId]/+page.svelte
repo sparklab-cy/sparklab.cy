@@ -92,7 +92,7 @@
       <div class="purchase-section">
         {#if hasAccess}
           <div class="owned-message">
-            <h3>✓ You own this kit!</h3>
+            <h3>You own this kit!</h3>
             <p>Access your courses and start building.</p>
             <a href="/courses/official/{kit.id}" class="access-btn">View Courses</a>
           </div>
@@ -314,7 +314,7 @@
   }
   
   .features li::before {
-    content: "✓";
+    content: "-";
     position: absolute;
     left: 0;
     color: var(--primary-color);

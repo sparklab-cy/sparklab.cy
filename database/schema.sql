@@ -707,6 +707,7 @@ CREATE POLICY "Users can manage their own progress" ON user_lesson_progress
 -- ============================================================================
 
 -- Only admins can view and modify email templates
+-- But allow service role to read templates (for email service)
 CREATE POLICY "Only admins can manage email templates" ON email_templates
   FOR ALL USING (
     EXISTS (
@@ -714,6 +715,10 @@ CREATE POLICY "Only admins can manage email templates" ON email_templates
       WHERE id = auth.uid() AND role = 'admin'
     )
   );
+
+-- Allow service role to read templates (needed for email service)
+-- This is handled by the service role key which bypasses RLS
+-- But we also need a function for reading templates
 
 -- ============================================================================
 -- EMAIL LOGS POLICIES
@@ -737,6 +742,88 @@ CREATE POLICY "Only admins can create email logs" ON email_logs
       WHERE id = auth.uid() AND role = 'admin'
     )
   );
+
+-- ============================================================================
+-- FUNCTION to create email template (bypasses RLS for service operations)
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION create_email_template(
+  p_name TEXT,
+  p_subject TEXT,
+  p_html_content TEXT,
+  p_text_content TEXT,
+  p_variables JSONB DEFAULT '[]'::jsonb
+) RETURNS UUID AS $$
+DECLARE
+  v_template_id UUID;
+BEGIN
+  INSERT INTO email_templates (name, subject, html_content, text_content, variables)
+  VALUES (p_name, p_subject, p_html_content, p_text_content, p_variables)
+  ON CONFLICT (name) DO UPDATE SET
+    subject = EXCLUDED.subject,
+    html_content = EXCLUDED.html_content,
+    text_content = EXCLUDED.text_content,
+    variables = EXCLUDED.variables,
+    updated_at = NOW()
+  RETURNING id INTO v_template_id;
+  
+  RETURN v_template_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================================================
+-- FUNCTION to get email template (bypasses RLS for service operations)
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION get_email_template(p_name TEXT)
+RETURNS TABLE (
+  id UUID,
+  name TEXT,
+  subject TEXT,
+  html_content TEXT,
+  text_content TEXT,
+  variables JSONB,
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    et.id,
+    et.name,
+    et.subject,
+    et.html_content,
+    et.text_content,
+    et.variables,
+    et.created_at,
+    et.updated_at
+  FROM email_templates et
+  WHERE et.name = p_name;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================================================
+-- FUNCTION to log email (bypasses RLS for service operations)
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION log_email(
+  p_user_id UUID,
+  p_template_id UUID,
+  p_to_email TEXT,
+  p_subject TEXT,
+  p_content TEXT,
+  p_status TEXT DEFAULT 'pending'
+) RETURNS UUID AS $$
+DECLARE
+  v_log_id UUID;
+BEGIN
+  INSERT INTO email_logs (user_id, template_id, to_email, subject, content, status)
+  VALUES (p_user_id, p_template_id, p_to_email, p_subject, p_content, p_status)
+  RETURNING id INTO v_log_id;
+  
+  RETURN v_log_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================================
 -- FUNCTION to automatically create profile on user signup

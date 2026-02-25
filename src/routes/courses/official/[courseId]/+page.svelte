@@ -74,12 +74,12 @@
                 <div class="lesson-status">
                   {#if getLessonProgress(lesson.id)}
                     {#if getLessonProgress(lesson.id)?.status === 'completed'}
-                      <span class="status-icon completed">✓</span>
+                      <span class="status-icon completed">Done</span>
                     {:else}
-                      <span class="status-icon in-progress">●</span>
+                      <span class="status-icon in-progress">In Progress</span>
                     {/if}
                   {:else}
-                    <span class="status-icon not-started">○</span>
+                    <span class="status-icon not-started">Not Started</span>
                   {/if}
                 </div>
               </div>

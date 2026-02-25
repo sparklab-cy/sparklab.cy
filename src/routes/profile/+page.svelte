@@ -25,7 +25,7 @@
 <div class="dashboard-page">
   {#if successMessage === 'order-success'}
     <div class="success-message">
-      <h3>🎉 Order Successful!</h3>
+      <h3>Order Successful!</h3>
       <p>Thank you for your purchase. Your kits are now available in your courses.</p>
     </div>
   {/if}
@@ -60,7 +60,6 @@
     <!-- Analytics Overview -->
     <div class="analytics-grid">
       <div class="stat-card">
-        <div class="stat-icon">📚</div>
         <div class="stat-content">
           <h3>{totalCourses}</h3>
           <p>Total Courses</p>
@@ -68,7 +67,6 @@
       </div>
       
       <div class="stat-card">
-        <div class="stat-icon">✅</div>
         <div class="stat-content">
           <h3>{completedCourses}</h3>
           <p>Completed</p>
@@ -76,7 +74,6 @@
       </div>
       
       <div class="stat-card">
-        <div class="stat-icon">🔄</div>
         <div class="stat-content">
           <h3>{inProgressCourses}</h3>
           <p>In Progress</p>
@@ -84,7 +81,6 @@
       </div>
       
       <div class="stat-card">
-        <div class="stat-icon">📊</div>
         <div class="stat-content">
           <h3>{completionRate}%</h3>
           <p>Completion Rate</p>
@@ -110,11 +106,11 @@
                   <h4>{progress.course_title || 'Unknown Course'}</h4>
                   <p class="progress-status">
                     {#if progress.status === 'completed'}
-                      <span class="status completed">✓ Completed</span>
+                      <span class="status completed">Completed</span>
                     {:else if progress.status === 'in_progress'}
-                      <span class="status in-progress">🔄 In Progress</span>
+                      <span class="status in-progress">In Progress</span>
                     {:else}
-                      <span class="status not-started">⏳ Not Started</span>
+                      <span class="status not-started">Not Started</span>
                     {/if}
                   </p>
                 </div>

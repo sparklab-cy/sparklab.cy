@@ -1,6 +1,5 @@
 import type { PageServerLoad, Actions } from './$types';
 import { redirect } from '@sveltejs/kit';
-import { emailService } from '$lib/services/emailService';
 
 export const load: PageServerLoad = async ({ locals }) => {
   const { user, supabase } = locals;

@@ -120,18 +120,20 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    /* Use theme-aware overlay - darker for dark mode, lighter for light mode */
+    background: color-mix(in srgb, var(--color-text) 30%, transparent);
     z-index: 1000;
     display: flex;
     justify-content: flex-end;
     align-items: stretch;
+    backdrop-filter: blur(2px);
   }
   
   .cart-panel {
     width: 100%;
     max-width: 450px;
-    background: var(--surface);
-    border-left: 1px solid var(--border);
+    background: var(--secondary-background);
+    border-left: var(--border-width) solid var(--border);
     display: flex;
     flex-direction: column;
     animation: slideIn 0.3s ease-out;
@@ -151,13 +153,13 @@
     justify-content: space-between;
     align-items: center;
     padding: 1.5rem;
-    border-bottom: 1px solid var(--border);
+    border-bottom: var(--border-width) solid var(--border);
   }
   
   .cart-header h2 {
     margin: 0;
     color: var(--text);
-    font-size: 1.5rem;
+    font-size: var(--font-size-h2);
   }
   
   .close-btn {
@@ -193,16 +195,18 @@
   .continue-shopping {
     padding: 0.75rem 1.5rem;
     background: var(--primary-color);
-    color: white;
+    color: var(--color-background);
     border: none;
     border-radius: 8px;
     cursor: pointer;
     font-weight: 500;
-    transition: background 0.2s;
+    font-size: var(--font-size);
+    transition: background 0.2s, color 0.2s;
   }
   
   .continue-shopping:hover {
     background: var(--primary-dark);
+    color: var(--color-background);
   }
   
   .cart-items {
@@ -217,10 +221,10 @@
     gap: 1rem;
     align-items: center;
     padding: 1rem;
-    border: 1px solid var(--border);
+    border: var(--border-width) solid var(--border);
     border-radius: 8px;
     margin-bottom: 1rem;
-    background: var(--background);
+    background: var(--color-background);
   }
   
   .item-image {
@@ -238,13 +242,13 @@
   
   .item-details h3 {
     margin: 0 0 0.25rem 0;
-    font-size: 1rem;
+    font-size: var(--font-size);
     color: var(--text);
   }
   
   .item-type {
     margin: 0 0 0.25rem 0;
-    font-size: 0.8rem;
+    font-size: var(--font-size);
     color: var(--muted);
     text-transform: uppercase;
   }
@@ -264,7 +268,7 @@
   .quantity-btn {
     width: 28px;
     height: 28px;
-    border: 1px solid var(--border);
+    border: var(--border-width) solid var(--border);
     background: var(--background);
     color: var(--text);
     border-radius: 4px;
@@ -273,12 +277,13 @@
     align-items: center;
     justify-content: center;
     font-weight: bold;
+    font-size: var(--font-size);
     transition: all 0.2s;
   }
   
   .quantity-btn:hover:not(:disabled) {
     background: var(--primary-color);
-    color: white;
+    color: var(--color-background);
     border-color: var(--primary-color);
   }
   
@@ -291,6 +296,7 @@
     min-width: 20px;
     text-align: center;
     font-weight: 500;
+    color: var(--color-text);
   }
   
   .item-total {
@@ -313,13 +319,13 @@
   
   .remove-btn:hover {
     background: var(--danger);
-    color: white;
+    color: var(--color-background);
   }
   
   .cart-footer {
     padding: 1.5rem;
-    border-top: 1px solid var(--border);
-    background: var(--surface);
+    border-top: var(--border-width) solid var(--border);
+    background: var(--secondary-background);
   }
   
   .cart-total {
@@ -327,7 +333,7 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1rem;
-    font-size: 1.2rem;
+    font-size: var(--font-size-h3);
     font-weight: 600;
     color: var(--text);
   }
@@ -345,11 +351,12 @@
     flex: 1;
     padding: 0.75rem;
     background: var(--secondary-background);
-    border: 1px solid var(--border);
+    border: var(--border-width) solid var(--border);
     color: var(--text);
     border-radius: 8px;
     cursor: pointer;
     font-weight: 500;
+    font-size: var(--font-size);
     transition: background 0.2s;
   }
   
@@ -361,16 +368,18 @@
     flex: 2;
     padding: 0.75rem;
     background: var(--primary-color);
-    color: white;
+    color: var(--color-background);
     border: none;
     border-radius: 8px;
     cursor: pointer;
     font-weight: 500;
-    transition: background 0.2s;
+    font-size: var(--font-size);
+    transition: background 0.2s, color 0.2s;
   }
   
   .checkout-btn:hover {
     background: var(--primary-dark);
+    color: var(--color-background);
   }
   
   @media (max-width: 768px) {
