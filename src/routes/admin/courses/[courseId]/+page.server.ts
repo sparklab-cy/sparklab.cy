@@ -42,9 +42,27 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
         if (lessonsError) throw lessonsError;
 
+        // Load lesson files for all lessons in this course
+        const lessonIds = (lessons || []).map((l: { id: string }) => l.id);
+        let lessonFilesMap: Record<string, any[]> = {};
+
+        if (lessonIds.length > 0) {
+            const { data: allFiles } = await supabase
+                .from('lesson_files')
+                .select('*')
+                .in('lesson_id', lessonIds)
+                .order('tab_order', { ascending: true });
+
+            for (const file of allFiles ?? []) {
+                if (!lessonFilesMap[file.lesson_id]) lessonFilesMap[file.lesson_id] = [];
+                lessonFilesMap[file.lesson_id].push(file);
+            }
+        }
+
         return {
             course,
             lessons: lessons || [],
+            lessonFilesMap,
             error: null
         };
 
@@ -53,6 +71,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
         return {
             course: null,
             lessons: [],
+            lessonFilesMap: {},
             error: 'Failed to load course'
         };
     }

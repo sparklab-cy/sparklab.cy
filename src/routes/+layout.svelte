@@ -23,6 +23,7 @@
         root.style.setProperty('--color-text', stylesheet.textColor);
         root.style.setProperty('--secondary-background', stylesheet.secondaryBackground);
         root.style.setProperty('--border', stylesheet.borderColor);
+        root.style.setProperty('--warning', stylesheet.warning);
         
         // Border width
         root.style.setProperty('--border-width', stylesheet.borderWidth);

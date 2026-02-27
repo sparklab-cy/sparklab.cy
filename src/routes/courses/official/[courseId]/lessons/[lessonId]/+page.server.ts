@@ -90,12 +90,20 @@ export const load: PageServerLoad = async ({ params, locals }) => {
       userProgress = progressData || [];
     }
 
+    // Load lesson files (tabs)
+    const { data: lessonFiles } = await supabase
+      .from('lesson_files')
+      .select('*')
+      .eq('lesson_id', lessonId)
+      .order('tab_order', { ascending: true });
+
     return {
       lesson: lessonData,
       course: courseData,
       lessons: lessonsData || [],
       userProgress,
       lessonContent,
+      lessonFiles: lessonFiles ?? [],
       error: null
     };
 
@@ -107,6 +115,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
       lessons: null,
       userProgress: [],
       lessonContent: null,
+      lessonFiles: [],
       error: 'Failed to load lesson'
     };
   }

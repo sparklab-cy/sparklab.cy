@@ -1,11 +1,12 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
   import DynamicLesson from '$lib/components/DynamicLesson.svelte';
+  import LessonFileTabs from '$lib/components/LessonFileTabs.svelte';
   import LessonLayout from '$lib/components/LessonLayout.svelte';
   import type { Lesson, UserProgress } from '$lib/types/courses';
   
   const { data } = $props();
-  const { lesson, userProgress, lessonContent, lessons, course, error } = data;
+  const { lesson, userProgress, lessonContent, lessons, course, error, lessonFiles } = data;
   
   // Find the current lesson's progress
   const currentLessonProgress = userProgress.find(p => p.lesson_id === lesson?.id);
@@ -51,7 +52,9 @@
       </div>
       
       <div class="lesson-body">
-        {#if lessonContent}
+        {#if lessonFiles && lessonFiles.length > 0}
+          <LessonFileTabs files={lessonFiles} />
+        {:else if lessonContent}
           <DynamicLesson lessonContent={lessonContent} />
         {:else}
           <div class="no-content">No content available for this lesson.</div>

@@ -2,7 +2,18 @@
   import { page } from '$app/state';
   import type { Lesson, UserProgress } from '$lib/types/courses';
   
-  const { lessons, currentLesson, userProgress, courseType, courseId } = $props();
+  import type { Snippet } from 'svelte';
+
+  interface Props {
+    lessons: Lesson[];
+    currentLesson: Lesson;
+    userProgress: UserProgress[];
+    courseType: string;
+    courseId: string;
+    children: Snippet;
+  }
+
+  const { lessons, currentLesson, userProgress, courseType, courseId, children }: Props = $props();
   
   const currentPath = $derived(page.url.pathname);
   
@@ -70,7 +81,7 @@
   
   <!-- Main Content -->
   <main class="lesson-main">
-    <slot />
+    {@render children()}
   </main>
   
   <!-- Footer Navigation -->

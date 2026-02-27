@@ -7,6 +7,7 @@ export interface StyleSheet {
 	secondaryBackground: string,
 	borderColor: string,
 	textColor: string,
+	warning: string,
 	borderWidth: string,
 	fontSize: string,
 	fontSizeH1: string,
@@ -32,26 +33,28 @@ export function getCurrentStyleSheet(): StyleSheet {
 		fontSizeH5: '10px',
 		fontSizeH6: '5px',
 		...(theme === 'light'
-			? {
-				  primary: '#7476fc',
-				  secondary: '#5390D9',
-				  tertiary: '#48BFE3',
-				  accent: '#7400B8',
-				  background: '#ffffff',
-				  secondaryBackground: '#f9f9f9',
-				  borderColor: '#f0f0f0',
-				  textColor: '#2f2f2f'
-			  }
-			: {
-				  primary: '#7476fc',
-				  secondary: '#5390D9',
-				  tertiary: '#48BFE3',
-				  accent: '#7400B8',
-				  background: '#1c1c1c',
-				  secondaryBackground: '#1f1f1f',
-				  borderColor: '#2f2f2f',
-				  textColor: '#dedede'
-			  })
+		? {
+			  primary: '#7476fc',
+			  secondary: '#5390D9',
+			  tertiary: '#48BFE3',
+			  accent: '#7400B8',
+			  background: '#ffffff',
+			  secondaryBackground: '#f9f9f9',
+			  borderColor: '#f0f0f0',
+			  textColor: '#2f2f2f',
+			  warning: '#f59e0b'
+		  }
+		: {
+			  primary: '#7476fc',
+			  secondary: '#5390D9',
+			  tertiary: '#48BFE3',
+			  accent: '#7400B8',
+			  background: '#1c1c1c',
+			  secondaryBackground: '#1f1f1f',
+			  borderColor: '#2f2f2f',
+			  textColor: '#dedede',
+			  warning: '#f59e0b'
+		  })
 	}
 }
 

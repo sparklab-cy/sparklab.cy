@@ -161,5 +161,104 @@ export const actions: Actions = {
       console.error('Failed to update course:', error);
       return { success: false, error: 'Failed to update course' };
     }
+  },
+
+  createLesson: async ({ request, locals }) => {
+    const { user, supabase } = locals;
+
+    if (!user) {
+      return { success: false, error: 'Please log in to create lessons' };
+    }
+
+    try {
+      const formData = await request.formData();
+      const courseId = formData.get('courseId') as string;
+      const title = formData.get('title') as string;
+      const orderIndex = parseInt(formData.get('order_index') as string) || 1;
+      const estimatedDuration = formData.get('estimated_duration')
+        ? parseInt(formData.get('estimated_duration') as string)
+        : null;
+
+      // Verify user owns this course
+      const { data: course } = await supabase
+        .from('custom_courses')
+        .select('creator_id')
+        .eq('id', courseId)
+        .eq('creator_id', user.id)
+        .single();
+
+      if (!course) {
+        return { success: false, error: 'Course not found or permission denied' };
+      }
+
+      const { data: lesson, error } = await supabase
+        .from('lessons')
+        .insert({
+          course_id: courseId,
+          course_type: 'custom',
+          title,
+          content_type: 'text',
+          order_index: orderIndex,
+          estimated_duration: estimatedDuration,
+          is_published: false
+        })
+        .select()
+        .single();
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, lessonId: lesson.id, message: 'Lesson created!' };
+    } catch (error) {
+      console.error('Failed to create lesson:', error);
+      return { success: false, error: 'Failed to create lesson' };
+    }
+  },
+
+  deleteLesson: async ({ request, locals }) => {
+    const { user, supabase } = locals;
+
+    if (!user) {
+      return { success: false, error: 'Please log in' };
+    }
+
+    try {
+      const formData = await request.formData();
+      const lessonId = formData.get('lessonId') as string;
+
+      // Verify ownership via the custom_courses join
+      const { data: lesson } = await supabase
+        .from('lessons')
+        .select('course_id, course_type')
+        .eq('id', lessonId)
+        .eq('course_type', 'custom')
+        .single();
+
+      if (!lesson) {
+        return { success: false, error: 'Lesson not found' };
+      }
+
+      const { data: course } = await supabase
+        .from('custom_courses')
+        .select('creator_id')
+        .eq('id', lesson.course_id)
+        .single();
+
+      if (course?.creator_id !== user.id) {
+        return { success: false, error: 'Forbidden' };
+      }
+
+      const { error } = await supabase.from('lessons').delete().eq('id', lessonId);
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, message: 'Lesson deleted' };
+    } catch (error) {
+      console.error('Failed to delete lesson:', error);
+      return { success: false, error: 'Failed to delete lesson' };
+    }
   }
 }; 

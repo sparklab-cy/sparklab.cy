@@ -1,4 +1,5 @@
-import type { PageServerLoad } from './$types';
+import type { PageServerLoad, Actions } from './$types';
+import { redirect } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ url, locals }) => {
   const selectedKit = url.searchParams.get('kit');
@@ -85,12 +86,25 @@ export const load: PageServerLoad = async ({ url, locals }) => {
       customCourses = [];
     }
 
+    // Load the user's own courses (as creator) when they own kits
+    let userCourses: any[] = [];
+    if (user && userKits.length > 0) {
+      const { data } = await supabase
+        .from('custom_courses')
+        .select('*, kits:kit_id(name, theme, level)')
+        .eq('creator_id', user.id)
+        .order('created_at', { ascending: false });
+      userCourses = data ?? [];
+    }
+
     return {
       kits: kits || [],
       officialCourses: officialCourses || [],
       customCourses: customCourses || [],
+      userCourses,
       selectedKit,
       userKits,
+      canCreateCourses: userKits.length > 0,
       error: null
     };
 
@@ -100,9 +114,54 @@ export const load: PageServerLoad = async ({ url, locals }) => {
       kits: [],
       officialCourses: [],
       customCourses: [],
+      userCourses: [],
       selectedKit,
       userKits: [],
+      canCreateCourses: false,
       error: 'Failed to load courses'
     };
+  }
+};
+
+export const actions: Actions = {
+  createCourse: async ({ request, locals }) => {
+    const { user, supabase } = locals;
+    if (!user) return { success: false, error: 'Please log in' };
+
+    const formData = await request.formData();
+    const title = formData.get('title') as string;
+    const description = formData.get('description') as string;
+    const kitId = formData.get('kitId') as string;
+    const isPublic = formData.get('isPublic') === 'true';
+
+    // Verify the user has access to this kit
+    const { data: permission } = await supabase
+      .from('user_permissions')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('kit_id', kitId)
+      .eq('permission_type', 'course_access')
+      .single();
+
+    if (!permission) {
+      return { success: false, error: 'You do not have access to the selected kit' };
+    }
+
+    const { data: course, error: err } = await supabase
+      .from('custom_courses')
+      .insert({
+        creator_id: user.id,
+        kit_id: kitId,
+        title,
+        description,
+        price: 0,
+        is_public: isPublic,
+        is_published: false
+      })
+      .select()
+      .single();
+
+    if (err) return { success: false, error: err.message };
+    throw redirect(303, `/create-course/${course.id}`);
   }
 }; 

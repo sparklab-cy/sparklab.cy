@@ -96,6 +96,16 @@ export interface Kit {
     order: number;
   }
 
+  export interface CourseAccessGrant {
+    id: string;
+    course_id: string;
+    user_id: string;
+    granted_by: string;
+    created_at: string;
+    // joined
+    profiles?: { full_name: string | null; email: string | null };
+  }
+
   // New types for QR codes and purchases
   export interface KitCode {
     id: string;
@@ -132,6 +142,17 @@ export interface Kit {
     variables: string[]; // array of variable names that can be replaced
     created_at: string;
     updated_at: string;
+  }
+
+  export interface LessonFile {
+    id: string;
+    lesson_id: string;
+    file_name: string;
+    file_type: 'markdown' | 'video' | 'svelte';
+    storage_path: string;
+    compiled_path?: string;
+    tab_order: number;
+    created_at: string;
   }
 
   export interface EmailLog {

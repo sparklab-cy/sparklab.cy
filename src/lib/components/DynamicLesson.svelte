@@ -1,88 +1,95 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { mount, unmount } from 'svelte';
   import type { LessonContent } from '$lib/types/courses';
-  
-  const { lessonContent } = $props();
-  
-  let componentElement: HTMLElement = $state(new HTMLElement());
-  let componentInstance: any;
-  
-  onMount(() => {
-    if (lessonContent.type === 'svelte' && lessonContent.svelteComponent) {
-      loadSvelteComponent(lessonContent.svelteComponent, lessonContent.componentProps);
+  import { lessonComponents } from '$lib/lessonComponents';
+
+  const { lessonContent }: { lessonContent: LessonContent } = $props();
+
+  let containerElement: HTMLElement | undefined = $state();
+  let mountedInstance: Record<string, any> | undefined;
+  let componentError = $state<string | null>(null);
+
+  $effect(() => {
+    if (
+      lessonContent.type === 'svelte' &&
+      lessonContent.svelteComponent &&
+      containerElement
+    ) {
+      mountComponent(lessonContent.svelteComponent, lessonContent.componentProps ?? {});
     }
+
+    return () => {
+      if (mountedInstance) {
+        unmount(mountedInstance);
+        mountedInstance = undefined;
+      }
+    };
   });
-  
-  async function loadSvelteComponent(componentCode: string, props: any = {}) {
-    try {
-      // Sanitize the component code
-      const sanitizedCode = sanitizeComponentCode(componentCode);
-      
-      // Create a dynamic module
-      const moduleCode = `
-        import { createRoot } from 'svelte';
-        ${sanitizedCode}
-        export default Component;
-      `;
-      
-      // Use dynamic import with a blob URL
-      const blob = new Blob([moduleCode], { type: 'application/javascript' });
-      const url = URL.createObjectURL(blob);
-      
-      const module = await import(url);
-      const Component = module.default;
-      
-      // Mount the component
-      componentInstance = new Component({
-        target: componentElement,
-        props
-      });
-      
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Failed to load Svelte component:', error);
-      componentElement.innerHTML = '<div class="error">Failed to load interactive content</div>';
+
+  function mountComponent(componentKey: string, props: Record<string, any>) {
+    if (mountedInstance) {
+      unmount(mountedInstance);
+      mountedInstance = undefined;
     }
-  }
-  
-  function sanitizeComponentCode(code: string): string {
-    // Remove potentially dangerous imports
-    const dangerousImports = [
-      'fs', 'path', 'http', 'https', 'child_process', 
-      'crypto', 'os', 'process', 'global'
-    ];
-    
-    let sanitized = code;
-    dangerousImports.forEach(importName => {
-      const regex = new RegExp(`import\\s+.*?from\\s+['"]${importName}['"]`, 'g');
-      sanitized = sanitized.replace(regex, '');
+
+    componentError = null;
+    const Component = lessonComponents[componentKey];
+
+    if (!Component) {
+      componentError = `Interactive component "${componentKey}" is not registered.`;
+      return;
+    }
+
+    mountedInstance = mount(Component, {
+      target: containerElement!,
+      props
     });
-    
-    return sanitized;
   }
 </script>
 
 <div class="dynamic-lesson">
   {#if lessonContent.type === 'svelte'}
-    <div bind:this={componentElement} class="svelte-component-container"></div>
-  {:else if lessonContent.type === 'text' && lessonContent.blocks}
+    {#if componentError}
+      <div class="component-error">{componentError}</div>
+    {/if}
+    <div bind:this={containerElement} class="svelte-component-container"></div>
+
+  {:else if (lessonContent.type === 'text' || lessonContent.type === 'interactive') && lessonContent.blocks}
     <div class="static-content">
       {#each lessonContent.blocks as block}
         <div class="content-block">
           {#if block.type === 'paragraph'}
             <p>{block.content}</p>
+
           {:else if block.type === 'image'}
-            <img src={block.content.src} alt={block.content.alt} />
+            <img src={block.content.src} alt={block.content.alt ?? ''} class="content-image" />
+
           {:else if block.type === 'video'}
-            <video controls src={block.content.src}></video>
+            <!-- svelte-ignore a11y_media_has_caption -->
+            <video controls src={block.content.src} class="content-video"></video>
+
           {:else if block.type === 'code_editor'}
-            <div class="code-editor">
-              <textarea>{block.content.code}</textarea>
+            <div class="code-block">
+              {#if block.content.language}
+                <div class="code-lang">{block.content.language}</div>
+              {/if}
+              <pre><code>{block.content.code}</code></pre>
+            </div>
+
+          {:else if block.type === 'quiz'}
+            <div class="unsupported">
+              Quiz blocks are not yet supported in this renderer.
+            </div>
+
+          {:else if block.type === 'circuit_diagram'}
+            <div class="unsupported">
+              Circuit diagram blocks are not yet supported in this renderer.
             </div>
           {/if}
         </div>
       {/each}
     </div>
+
   {:else}
     <div class="unsupported-content">
       Content type "{lessonContent.type}" is not supported yet.
@@ -93,45 +100,76 @@
 <style>
   .svelte-component-container {
     min-height: 200px;
-    border: 1px solid #eee;
+    border: 1px solid var(--border);
     border-radius: 8px;
     padding: 20px;
     margin: 20px 0;
   }
-  
+
   .static-content {
-    line-height: 1.6;
+    line-height: 1.7;
   }
-  
+
   .content-block {
-    margin-bottom: 20px;
+    margin-bottom: 1.5rem;
   }
-  
-  .code-editor {
-    background: #f5f5f5;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 10px;
+
+  .content-image {
+    max-width: 100%;
+    border-radius: 8px;
   }
-  
-  .code-editor textarea {
+
+  .content-video {
     width: 100%;
-    min-height: 100px;
-    border: none;
-    background: transparent;
-    font-family: 'Courier New', monospace;
+    border-radius: 8px;
   }
-  
-  .error {
-    color: red;
-    padding: 20px;
-    text-align: center;
+
+  .code-block {
+    background: var(--secondary-background);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
   }
-  
+
+  .code-lang {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .code-block pre {
+    margin: 0;
+    padding: 1rem;
+    overflow-x: auto;
+  }
+
+  .code-block code {
+    font-family: 'Courier New', Consolas, monospace;
+    font-size: 0.9rem;
+    color: var(--color-text);
+  }
+
+  .component-error {
+    color: var(--danger);
+    padding: 1rem;
+    background: rgba(220, 53, 69, 0.1);
+    border: 1px solid var(--danger);
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+  }
+
+  .unsupported,
   .unsupported-content {
-    color: #666;
-    padding: 20px;
+    color: var(--muted);
+    padding: 1.5rem;
     text-align: center;
     font-style: italic;
+    background: var(--secondary-background);
+    border: 1px solid var(--border);
+    border-radius: 8px;
   }
 </style>

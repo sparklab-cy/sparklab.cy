@@ -1,44 +1,110 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
-  import { goto } from '$app/navigation';
-  import type { OfficialCourse, Lesson } from '$lib/types/courses';
+  import type { Lesson, LessonFile } from '$lib/types/courses';
   
   const { data } = $props();
-  const { course, lessons, error } = data;
-  
+  const { course, lessons, lessonFilesMap: initialFilesMap, error } = data;
+
   let showCreateLesson = $state(false);
   let editingLesson: Lesson | null = $state(null);
   let showDeleteConfirm = $state<string | null>(null);
-  
+  let expandedFiles = $state<Set<string>>(new Set());
+  let lessonFilesMap = $state<Record<string, LessonFile[]>>(initialFilesMap ?? {});
+  let uploadingFor = $state<string | null>(null);
+  let uploadError = $state<Record<string, string>>({});
+
   function createNewLesson() {
     showCreateLesson = true;
     editingLesson = null;
   }
-  
+
   function editLesson(lesson: Lesson) {
     editingLesson = lesson;
     showCreateLesson = true;
   }
-  
+
   function deleteLesson(lessonId: string) {
     showDeleteConfirm = lessonId;
   }
-  
+
+  function toggleFiles(lessonId: string) {
+    const next = new Set(expandedFiles);
+    if (next.has(lessonId)) next.delete(lessonId);
+    else next.add(lessonId);
+    expandedFiles = next;
+  }
+
   function handleFormResult(result: any) {
     if (result.type === 'success') {
       showCreateLesson = false;
       editingLesson = null;
-      // Refresh the page to show changes
       window.location.reload();
     }
   }
-  
+
   function handleDeleteResult(result: any) {
     if (result.type === 'success') {
       showDeleteConfirm = null;
-      // Refresh the page to show changes
       window.location.reload();
     }
+  }
+
+  async function uploadFile(lessonId: string, event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    uploadingFor = lessonId;
+    uploadError = { ...uploadError, [lessonId]: '' };
+
+    const existingFiles = lessonFilesMap[lessonId] ?? [];
+    const formData = new FormData();
+    formData.append('lesson_id', lessonId);
+    formData.append('file', file);
+    formData.append('tab_order', String(existingFiles.length));
+
+    try {
+      const res = await fetch('/api/lesson-files', { method: 'POST', body: formData });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? 'Upload failed');
+      lessonFilesMap = {
+        ...lessonFilesMap,
+        [lessonId]: [...existingFiles, json]
+      };
+    } catch (err) {
+      uploadError = {
+        ...uploadError,
+        [lessonId]: err instanceof Error ? err.message : 'Upload failed'
+      };
+    } finally {
+      uploadingFor = null;
+      input.value = '';
+    }
+  }
+
+  async function deleteFile(lessonId: string, fileId: string) {
+    try {
+      const res = await fetch(`/api/lesson-files/${fileId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error ?? 'Delete failed');
+      }
+      lessonFilesMap = {
+        ...lessonFilesMap,
+        [lessonId]: (lessonFilesMap[lessonId] ?? []).filter(f => f.id !== fileId)
+      };
+    } catch (err) {
+      uploadError = {
+        ...uploadError,
+        [lessonId]: err instanceof Error ? err.message : 'Delete failed'
+      };
+    }
+  }
+
+  function fileTypeLabel(type: LessonFile['file_type']): string {
+    if (type === 'markdown') return 'MD';
+    if (type === 'video') return 'VID';
+    return 'SVL';
   }
 </script>
 
@@ -68,7 +134,7 @@
       <section class="lessons-section">
         <div class="section-header">
           <h2>Lessons ({lessons.length})</h2>
-          <button class="create-btn" on:click={createNewLesson}>
+          <button class="create-btn" onclick={createNewLesson}>
             + Add Lesson
           </button>
         </div>
@@ -81,30 +147,88 @@
           <div class="lessons-list">
             {#each lessons as lesson, index}
               <div class="lesson-card">
-                <div class="lesson-info">
-                  <div class="lesson-number">{index + 1}</div>
-                  <div class="lesson-details">
-                    <h3>{lesson.title}</h3>
-                    <div class="lesson-meta">
-                      <span class="content-type">{lesson.content_type}</span>
-                      {#if lesson.estimated_duration}
-                        <span class="duration">{lesson.estimated_duration} min</span>
-                      {/if}
-                      <span class="status {lesson.is_published ? 'published' : 'draft'}">
-                        {lesson.is_published ? 'Published' : 'Draft'}
-                      </span>
+                <!-- Lesson header row -->
+                <div class="lesson-top">
+                  <div class="lesson-info">
+                    <div class="lesson-number">{index + 1}</div>
+                    <div class="lesson-details">
+                      <h3>{lesson.title}</h3>
+                      <div class="lesson-meta">
+                        <span class="content-type">{lesson.content_type}</span>
+                        {#if lesson.estimated_duration}
+                          <span class="duration">{lesson.estimated_duration} min</span>
+                        {/if}
+                        <span class="status {lesson.is_published ? 'published' : 'draft'}">
+                          {lesson.is_published ? 'Published' : 'Draft'}
+                        </span>
+                        <span class="file-count">
+                          {(lessonFilesMap[lesson.id] ?? []).length} file(s)
+                        </span>
+                      </div>
                     </div>
                   </div>
+
+                  <div class="lesson-actions">
+                    <button
+                      class="files-btn"
+                      onclick={() => toggleFiles(lesson.id)}
+                    >
+                      {expandedFiles.has(lesson.id) ? 'Hide Files' : 'Manage Files'}
+                    </button>
+                    <button class="edit-btn" onclick={() => editLesson(lesson)}>
+                      Edit
+                    </button>
+                    <button class="delete-btn" onclick={() => deleteLesson(lesson.id)}>
+                      Delete
+                    </button>
+                  </div>
                 </div>
-                
-                <div class="lesson-actions">
-                  <button class="edit-btn" on:click={() => editLesson(lesson)}>
-                    Edit
-                  </button>
-                  <button class="delete-btn" on:click={() => deleteLesson(lesson.id)}>
-                    Delete
-                  </button>
-                </div>
+
+                <!-- Expandable file management panel -->
+                {#if expandedFiles.has(lesson.id)}
+                  <div class="files-panel">
+                    <div class="files-header">
+                      <span class="files-title">Lesson Files (Tabs)</span>
+                      <label class="upload-label">
+                        {#if uploadingFor === lesson.id}
+                          <span class="uploading">Uploading…</span>
+                        {:else}
+                          + Upload File
+                          <input
+                            type="file"
+                            accept=".md,.svelte,.mp4,.webm,.ogg,.mov,.avi"
+                            class="file-input-hidden"
+                            onchange={(e) => uploadFile(lesson.id, e)}
+                            disabled={uploadingFor === lesson.id}
+                          />
+                        {/if}
+                      </label>
+                    </div>
+
+                    {#if uploadError[lesson.id]}
+                      <p class="upload-error">{uploadError[lesson.id]}</p>
+                    {/if}
+
+                    {#if (lessonFilesMap[lesson.id] ?? []).length === 0}
+                      <p class="no-files-hint">No files yet. Upload a .md, .svelte, or video file.</p>
+                    {:else}
+                      <ul class="file-list">
+                        {#each lessonFilesMap[lesson.id] as file}
+                          <li class="file-item">
+                            <span class="file-type-badge {file.file_type}">{fileTypeLabel(file.file_type)}</span>
+                            <span class="file-name">{file.file_name}</span>
+                            <button
+                              class="remove-file-btn"
+                              onclick={() => deleteFile(lesson.id, file.id)}
+                            >
+                              Remove
+                            </button>
+                          </li>
+                        {/each}
+                      </ul>
+                    {/if}
+                  </div>
+                {/if}
               </div>
             {/each}
           </div>
@@ -115,11 +239,23 @@
 
   <!-- Create/Edit Lesson Modal -->
   {#if showCreateLesson}
-    <div class="modal-overlay" on:click={() => showCreateLesson = false}>
-      <div class="modal" on:click|stopPropagation>
+    <div
+      class="modal-overlay"
+      role="presentation"
+      onclick={() => showCreateLesson = false}
+      onkeydown={(e) => e.key === 'Escape' && (showCreateLesson = false)}
+    >
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        tabindex="-1"
+        onclick={(e) => e.stopPropagation()}
+        onkeydown={(e) => e.stopPropagation()}
+      >
         <div class="modal-header">
           <h3>{editingLesson ? 'Edit Lesson' : 'Create New Lesson'}</h3>
-          <button class="close-btn" on:click={() => showCreateLesson = false}>×</button>
+          <button class="close-btn" onclick={() => showCreateLesson = false}>×</button>
         </div>
         
         <form 
@@ -225,7 +361,7 @@
           </div>
           
           <div class="form-actions">
-            <button type="button" class="cancel-btn" on:click={() => showCreateLesson = false}>
+            <button type="button" class="cancel-btn" onclick={() => showCreateLesson = false}>
               Cancel
             </button>
             <button type="submit" class="submit-btn">
@@ -239,11 +375,23 @@
 
   <!-- Delete Confirmation Modal -->
   {#if showDeleteConfirm}
-    <div class="modal-overlay" on:click={() => showDeleteConfirm = null}>
-      <div class="modal small" on:click|stopPropagation>
+    <div
+      class="modal-overlay"
+      role="presentation"
+      onclick={() => showDeleteConfirm = null}
+      onkeydown={(e) => e.key === 'Escape' && (showDeleteConfirm = null)}
+    >
+      <div
+        class="modal small"
+        role="dialog"
+        aria-modal="true"
+        tabindex="-1"
+        onclick={(e) => e.stopPropagation()}
+        onkeydown={(e) => e.stopPropagation()}
+      >
         <div class="modal-header">
           <h3>Delete Lesson</h3>
-          <button class="close-btn" on:click={() => showDeleteConfirm = null}>×</button>
+          <button class="close-btn" onclick={() => showDeleteConfirm = null}>×</button>
         </div>
         
         <div class="modal-content">
@@ -262,7 +410,7 @@
           <input type="hidden" name="lessonId" value={showDeleteConfirm} />
           
           <div class="form-actions">
-            <button type="button" class="cancel-btn" on:click={() => showDeleteConfirm = null}>
+            <button type="button" class="cancel-btn" onclick={() => showDeleteConfirm = null}>
               Cancel
             </button>
             <button type="submit" class="delete-btn">
@@ -589,5 +737,163 @@
   
   .submit-btn:hover {
     background: #45a049;
+  }
+
+  /* File management */
+  .lesson-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .lesson-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .file-count {
+    background: var(--secondary-background, #f5f5f5);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    color: var(--muted, #666);
+  }
+
+  .files-btn {
+    padding: 6px 12px;
+    border: 1px solid var(--color-primary, #7476fc);
+    background: transparent;
+    color: var(--color-primary, #7476fc);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.875rem;
+  }
+
+  .files-btn:hover {
+    background: var(--color-primary, #7476fc);
+    color: white;
+  }
+
+  .files-panel {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-top: 1px solid var(--border, #eee);
+    background: var(--secondary-background, #f9f9f9);
+    border-radius: 0 0 6px 6px;
+  }
+
+  .files-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+  }
+
+  .files-title {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--color-text, #333);
+  }
+
+  .upload-label {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 6px 14px;
+    background: var(--color-primary, #7476fc);
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: opacity 0.15s;
+  }
+
+  .upload-label:hover {
+    opacity: 0.88;
+  }
+
+  .file-input-hidden {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+  }
+
+  .uploading {
+    font-style: italic;
+    font-size: 0.875rem;
+  }
+
+  .upload-error {
+    color: #dc3545;
+    font-size: 0.85rem;
+    margin: 0.25rem 0 0.75rem;
+  }
+
+  .no-files-hint {
+    color: var(--muted, #888);
+    font-size: 0.875rem;
+    font-style: italic;
+    margin: 0;
+  }
+
+  .file-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .file-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    background: var(--color-background, #fff);
+    border: 1px solid var(--border, #eee);
+    border-radius: 4px;
+    font-size: 0.875rem;
+  }
+
+  .file-type-badge {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  .file-type-badge.markdown { background: #dbeafe; color: #1d4ed8; }
+  .file-type-badge.video    { background: #fce7f3; color: #9d174d; }
+  .file-type-badge.svelte   { background: #fef3c7; color: #92400e; }
+
+  .file-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-text, #333);
+  }
+
+  .remove-file-btn {
+    padding: 2px 8px;
+    border: 1px solid #dc3545;
+    background: transparent;
+    color: #dc3545;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+  }
+
+  .remove-file-btn:hover {
+    background: #dc3545;
+    color: white;
   }
 </style> 
