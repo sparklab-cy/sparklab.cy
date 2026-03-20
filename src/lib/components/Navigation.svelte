@@ -8,7 +8,10 @@
 <nav class="navigation">
   	<div class="nav-container">
 		<div class="nav-brand">
-			<a href="/" class="brand-link"><span class="brand-text">ByteBlocks</span></a>
+			<a href="/" class="brand-link">
+				<img src="/logo.png" alt="" class="brand-logo" />
+				<span class="brand-text">ByteBlocks</span>
+			</a>
 		</div>
 	
 	<div class="nav-right" class:is-shop={isShop}>
@@ -29,12 +32,13 @@
 
 <style>
 	.navigation {
-		border-bottom: 1px solid var(--secondary-background);
+		border-bottom: 1px solid rgba(128, 128, 128, 0.1);
 		position: sticky;
 		top: 0;
 		z-index: 100;
-		background: var(--color-background);
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+		background: color-mix(in srgb, var(--color-background) 80%, transparent);
+		backdrop-filter: blur(14px);
+		-webkit-backdrop-filter: blur(14px);
 	}
 
 	.nav-container {
@@ -44,7 +48,7 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		height: 60px;
+		height: 56px;
 	}
 
 	.nav-brand {
@@ -54,14 +58,24 @@
 
 	.brand-link {
 		text-decoration: none;
-		font-weight: bold;
-		font-size: var(--font-size-h2);
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-family: 'Nunito', system-ui, sans-serif;
+		font-weight: 800;
+		font-size: 1.35rem;
 		color: var(--color-primary);
-		transition: color 0.2s ease;
+		transition: opacity 0.2s ease;
 	}
 
 	.brand-link:hover {
-		color: var(--color-accent);
+		opacity: 0.8;
+	}
+
+	.brand-logo {
+		height: 30px;
+		width: auto;
+		border-radius: 4px;
 	}
 
 	.brand-text {
@@ -78,21 +92,22 @@
 	.nav-link {
 		text-decoration: none;
 		font-weight: 500;
-		padding: 0.5rem 0;
-		border-bottom: var(--border-width) solid transparent;
+		padding: 0.4rem 0;
+		border-bottom: 2px solid transparent;
 		color: var(--color-text);
-		font-size: var(--font-size);
-		transition: all 0.2s ease;
+		font-size: 0.9rem;
+		letter-spacing: 0.01em;
+		transition: color 0.2s ease, border-color 0.2s ease;
 	}
 
 	.nav-link:hover {
 		color: var(--color-primary);
-		border-bottom: var(--border-width) solid var(--color-secondary);
 	}
 
 	.nav-link.active {
-		border-bottom: var(--border-width) solid var(--color-primary);
+		border-bottom-color: var(--color-primary);
 		color: var(--color-primary);
+		font-weight: 600;
 	}
 
 	.nav-right {

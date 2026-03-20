@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { supabase } from '$lib/supabaseClient';
 	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';
 	import {
 		faGear,
@@ -34,8 +34,12 @@
 	}
 
 	async function logout() {
-		await supabase.auth.signOut();
-		goto('/login');
+		const res = await fetch('/auth/logout', { method: 'POST' });
+		if (res.redirected) {
+			window.location.href = res.url;
+		} else {
+			window.location.href = '/login';
+		}
 	}
 
 	function toggleMenu() {

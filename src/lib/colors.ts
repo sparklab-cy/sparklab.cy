@@ -25,23 +25,23 @@ let theme: ThemeMode = 'dark';
 export function getCurrentStyleSheet(): StyleSheet {
 	return {
 		borderWidth: '2px',
-		fontSize: '15px',
-		fontSizeH1: '40px',
-		fontSizeH2: '30px',
-		fontSizeH3: '20px',
-		fontSizeH4: '15px',
-		fontSizeH5: '10px',
-		fontSizeH6: '5px',
+		fontSize: '1rem',
+		fontSizeH1: '2.75rem',
+		fontSizeH2: '2rem',
+		fontSizeH3: '1.5rem',
+		fontSizeH4: '1.125rem',
+		fontSizeH5: '0.875rem',
+		fontSizeH6: '0.75rem',
 		...(theme === 'light'
 		? {
 			  primary: '#7476fc',
 			  secondary: '#5390D9',
 			  tertiary: '#48BFE3',
 			  accent: '#7400B8',
-			  background: '#ffffff',
-			  secondaryBackground: '#f9f9f9',
-			  borderColor: '#f0f0f0',
-			  textColor: '#2f2f2f',
+			  background: '#f5f5f7',
+			  secondaryBackground: '#eeeef1',
+			  borderColor: '#dddde2',
+			  textColor: '#1d1d1f',
 			  warning: '#f59e0b'
 		  }
 		: {
@@ -49,10 +49,10 @@ export function getCurrentStyleSheet(): StyleSheet {
 			  secondary: '#5390D9',
 			  tertiary: '#48BFE3',
 			  accent: '#7400B8',
-			  background: '#1c1c1c',
-			  secondaryBackground: '#1f1f1f',
-			  borderColor: '#2f2f2f',
-			  textColor: '#dedede',
+			  background: '#141416',
+			  secondaryBackground: '#1a1a1e',
+			  borderColor: '#28282e',
+			  textColor: '#e0e0e4',
 			  warning: '#f59e0b'
 		  })
 	}

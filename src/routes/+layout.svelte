@@ -5,6 +5,7 @@
     import ShoppingCart from '$lib/components/ShoppingCart.svelte';
     import ThemeToggle from '$lib/components/ThemeToggle.svelte';
     import { getCurrentStyleSheet, getCurrentTheme } from '$lib/colors';
+    import MeshBackground from '$lib/components/MeshBackground.svelte';
 
     const { children, data } = $props();
     const { user, profile } = data;
@@ -54,6 +55,12 @@
         } else {
             root.style.setProperty('--muted', 'rgba(0, 0, 0, 0.6)');
         }
+
+        // Circuit-board mesh background (adapts to theme)
+        const meshColor = theme === 'dark' ? 'rgba(255,255,255,0.01)' : 'rgba(0,0,0,0.06)';
+        const nodeColor = theme === 'dark' ? 'rgba(116,118,252,0.10)' : 'rgba(116,118,252,0.12)';
+        const meshSvg = `<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><line x1='20' y1='0' x2='20' y2='40' stroke='${meshColor}' stroke-width='0.5'/><line x1='0' y1='20' x2='40' y2='20' stroke='${meshColor}' stroke-width='0.5'/><circle cx='20' cy='20' r='1.5' fill='${nodeColor}'/></svg>`;
+        root.style.setProperty('--mesh-bg', `url("data:image/svg+xml,${encodeURIComponent(meshSvg)}")`);
     }
     
     onMount(() => {
@@ -69,6 +76,8 @@
         updateCSSVariables();
     });
 </script>
+
+<MeshBackground />
 
 <main>
     <Navigation />
@@ -94,8 +103,12 @@
 
 <style>
     :global(:root) {
-        /* These will be set dynamically via JavaScript */
         --danger: #dc3545;
+        --radius: 12px;
+    }
+
+    :global(html) {
+        scroll-behavior: smooth;
     }
     
     /* Apply smooth transitions to color-related properties globally */
@@ -122,9 +135,24 @@
     
     :global(body) {
         margin: 0;
-        font-family: system-ui, -apple-system, sans-serif;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
         background-color: var(--color-background);
         color: var(--color-text);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    :global(h1), :global(h2) {
+        font-family: 'Nunito', 'Inter', system-ui, sans-serif;
+        line-height: 1.2;
+        letter-spacing: -0.01em;
+    }
+
+    :global(h3), :global(h4), :global(h5), :global(h6) {
+        font-family: 'Inter', system-ui, sans-serif;
+        font-weight: 600;
+        line-height: 1.3;
     }
     
     :global(*) {
@@ -133,8 +161,24 @@
     
     main {
         min-height: 100vh;
-        background-color: var(--color-background);
+        position: relative;
+        z-index: 1;
     }
+
+    @keyframes -global-fadeInUp {
+        from { opacity: 0; transform: translateY(24px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    :global(.animate-in) {
+        animation: fadeInUp 0.6s ease both;
+    }
+
+    :global(.animate-in.delay-1) { animation-delay: 0.1s; }
+    :global(.animate-in.delay-2) { animation-delay: 0.2s; }
+    :global(.animate-in.delay-3) { animation-delay: 0.3s; }
+    :global(.animate-in.delay-4) { animation-delay: 0.4s; }
+    :global(.animate-in.delay-5) { animation-delay: 0.5s; }
 
     .top-right-controls {
         position: fixed;

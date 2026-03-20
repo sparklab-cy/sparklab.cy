@@ -47,6 +47,12 @@
 		} else {
 			root.style.setProperty('--muted', 'rgba(0, 0, 0, 0.6)');
 		}
+
+		// Circuit-board mesh background
+		const meshColor = theme === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+		const nodeColor = theme === 'dark' ? 'rgba(116,118,252,0.15)' : 'rgba(116,118,252,0.12)';
+		const meshSvg = `<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><line x1='20' y1='0' x2='20' y2='40' stroke='${meshColor}' stroke-width='0.5'/><line x1='0' y1='20' x2='40' y2='20' stroke='${meshColor}' stroke-width='0.5'/><circle cx='20' cy='20' r='1.5' fill='${nodeColor}'/></svg>`;
+		root.style.setProperty('--mesh-bg', `url("data:image/svg+xml,${encodeURIComponent(meshSvg)}")`);
 	}
 
 	function toggleTheme() {
