@@ -1,604 +1,490 @@
 <script lang="ts">
+  import { enhance } from '$app/forms';
   import { page } from '$app/state';
-  import type { UserProgress, Kit, CustomCourse, OfficialCourse } from '$lib/types/courses';
-  
-  const { data } = $props();
-  const { user, profile, userProgress, userKits, recentOrders, analytics, error } = data;
-  
-  const currentPath = $derived(page.url.pathname);
-  const urlParams = $derived(page.url.searchParams);
-  const successMessage = $derived(urlParams.get('message'));
-  
-  // Calculate analytics
-  const totalCourses = userProgress.length;
-  const completedCourses = userProgress.filter(p => p.status === 'completed').length;
-  const inProgressCourses = userProgress.filter(p => p.status === 'in_progress').length;
-  const completionRate = totalCourses > 0 ? Math.round((completedCourses / totalCourses) * 100) : 0;
-  
-  // Get recent activity
-  const recentActivity = userProgress
-    .filter(p => p.completed_at)
-    .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())
-    .slice(0, 5);
+
+  const { data, form } = $props();
+  const { user, profile, userKits, userProgress, recentOrders, error } = data;
+
+  const successMessage = $derived(page.url.searchParams.get('message'));
+
+  const totalLessons = userProgress.length;
+  const completedLessons = userProgress.filter((p: any) => p.status === 'completed').length;
+  const inProgressLessons = userProgress.filter((p: any) => p.status === 'in_progress').length;
+  const completionRate = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+
+  let fullName = $state(profile?.full_name || user?.user_metadata?.full_name || '');
+  let bio = $state(profile?.bio || '');
 </script>
 
-<div class="dashboard-page">
+<div class="profile-page">
   {#if successMessage === 'order-success'}
-    <div class="success-message">
-      <h3>Order Successful!</h3>
-      <p>Thank you for your purchase. Your kits are now available in your courses.</p>
+    <div class="banner banner-success">
+      <strong>Order successful!</strong> Your kits are now available in your courses.
     </div>
   {/if}
-  
+
+  {#if form?.success}
+    <div class="banner banner-success">Profile updated.</div>
+  {/if}
+  {#if form?.error}
+    <div class="banner banner-error">{form.error}</div>
+  {/if}
+
   {#if error}
-    <div class="error">{error}</div>
+    <div class="banner banner-error">{error}</div>
   {:else}
-    <!-- Dashboard Header -->
-    <div class="dashboard-header">
-      <div class="user-info">
-        <div class="user-avatar">
-          {#if user?.user_metadata?.avatar_url}
-            <img src={user.user_metadata.avatar_url} alt="Profile" />
-          {:else}
-            <div class="avatar-placeholder">
-              {user?.user_metadata?.full_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
-            </div>
-          {/if}
-        </div>
-        <div class="user-details">
-          <h1>Welcome back, {user?.user_metadata?.full_name || user?.email}!</h1>
-          <p class="user-role">{profile?.role === 'admin' ? 'Administrator' : 'Student'}</p>
-        </div>
-      </div>
-      
-      <div class="quick-actions">
-        <a href="/courses" class="action-btn">Continue Learning</a>
-        <a href="/shop" class="action-btn secondary">Browse Shop</a>
-      </div>
-    </div>
-    
-    <!-- Analytics Overview -->
-    <div class="analytics-grid">
-      <div class="stat-card">
-        <div class="stat-content">
-          <h3>{totalCourses}</h3>
-          <p>Total Courses</p>
-        </div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-content">
-          <h3>{completedCourses}</h3>
-          <p>Completed</p>
-        </div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-content">
-          <h3>{inProgressCourses}</h3>
-          <p>In Progress</p>
-        </div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-content">
-          <h3>{completionRate}%</h3>
-          <p>Completion Rate</p>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Main Content Grid -->
-    <div class="dashboard-content">
-      <!-- Progress Overview -->
-      <div class="content-section">
-        <h2>Learning Progress</h2>
-        {#if userProgress.length === 0}
-          <div class="empty-state">
-            <p>You haven't started any courses yet.</p>
-            <a href="/courses" class="cta-btn">Start Learning</a>
-          </div>
+    <header class="profile-header animate-in">
+      <div class="avatar-area">
+        {#if user?.user_metadata?.avatar_url}
+          <img src={user.user_metadata.avatar_url} alt="Profile" class="avatar-img" />
         {:else}
-          <div class="progress-list">
-            {#each userProgress.slice(0, 5) as progress}
-              <div class="progress-item">
-                <div class="progress-info">
-                  <h4>{progress.course_title || 'Unknown Course'}</h4>
-                  <p class="progress-status">
-                    {#if progress.status === 'completed'}
-                      <span class="status completed">Completed</span>
-                    {:else if progress.status === 'in_progress'}
-                      <span class="status in-progress">In Progress</span>
-                    {:else}
-                      <span class="status not-started">Not Started</span>
-                    {/if}
-                  </p>
-                </div>
-                {#if progress.completed_at}
-                  <div class="progress-date">
-                    {new Date(progress.completed_at).toLocaleDateString()}
-                  </div>
-                {/if}
-              </div>
-            {/each}
+          <div class="avatar-placeholder">
+            {user?.user_metadata?.full_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
           </div>
-          <a href="/courses" class="view-all-btn">View All Courses</a>
         {/if}
       </div>
-      
-      <!-- My Kits -->
-      <div class="content-section">
+      <div class="header-text">
+        <h1>{user?.user_metadata?.full_name || user?.email}</h1>
+        <p class="role-label">{profile?.role === 'admin' ? 'Administrator' : profile?.role === 'teacher' ? 'Teacher' : 'Student'}</p>
+      </div>
+      <div class="header-actions">
+        <a href="/courses" class="btn-primary">My Courses</a>
+        <a href="/shop" class="btn-secondary">Shop</a>
+      </div>
+    </header>
+
+    <section class="stats-row animate-in delay-1">
+      <div class="stat-card">
+        <span class="stat-num">{totalLessons}</span>
+        <span class="stat-label">Lessons</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num">{completedLessons}</span>
+        <span class="stat-label">Completed</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num">{inProgressLessons}</span>
+        <span class="stat-label">In Progress</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num">{completionRate}%</span>
+        <span class="stat-label">Completion</span>
+      </div>
+    </section>
+
+    <div class="grid-two">
+      <section class="card animate-in delay-2">
         <h2>My Kits</h2>
         {#if userKits.length === 0}
-          <div class="empty-state">
-            <p>You don't have any kits yet.</p>
-            <a href="/shop" class="cta-btn">Browse Kits</a>
+          <div class="empty">
+            <p>No kits yet.</p>
+            <a href="/shop" class="btn-primary btn-sm">Browse Kits</a>
           </div>
         {:else}
-          <div class="kits-grid">
+          <div class="kit-list">
             {#each userKits as kit}
-              <div class="kit-card">
-                <div class="kit-image">
-                  <img src={kit.image_url || '/default-kit-image.jpg'} alt={kit.name} />
-                </div>
-                <div class="kit-info">
-                  <h4>{kit.name}</h4>
-                  <p class="kit-level">Level {kit.level}</p>
-                  <p class="kit-theme">{kit.theme}</p>
+              <div class="kit-row">
+                <img src={kit.image_url || '/default-kit-image.jpg'} alt={kit.name} class="kit-thumb" />
+                <div>
+                  <strong>{kit.name}</strong>
+                  <span class="kit-meta">Level {kit.level} &middot; {kit.theme}</span>
                 </div>
               </div>
             {/each}
           </div>
         {/if}
-      </div>
-      
-      <!-- Recent Orders -->
-      <div class="content-section">
+      </section>
+
+      <section class="card animate-in delay-3">
         <h2>Recent Orders</h2>
         {#if recentOrders.length === 0}
-          <div class="empty-state">
+          <div class="empty">
             <p>No orders yet.</p>
-            <a href="/shop" class="cta-btn">Start Shopping</a>
+            <a href="/shop" class="btn-primary btn-sm">Start Shopping</a>
           </div>
         {:else}
-          <div class="orders-list">
+          <div class="order-list">
             {#each recentOrders as order}
-              <div class="order-item">
-                <div class="order-info">
-                  <h4>Order #{order.id}</h4>
-                  <p class="order-date">{new Date(order.created_at).toLocaleDateString()}</p>
-                  <p class="order-status">
-                    <span class="status {order.status}">{order.status}</span>
-                  </p>
+              <div class="order-row">
+                <div>
+                  <strong>Order #{order.id.slice(0, 8)}</strong>
+                  <span class="order-date">{new Date(order.created_at).toLocaleDateString()}</span>
                 </div>
-                <div class="order-total">
-                  ${order.total_amount}
-                </div>
+                <span class="order-badge {order.status}">{order.status}</span>
+                <span class="order-amount">${order.total_amount}</span>
               </div>
             {/each}
           </div>
         {/if}
-      </div>
-      
-      <!-- Profile Settings -->
-      <div class="content-section">
-        <h2>Profile Settings</h2>
-        <div class="profile-form">
-          <div class="form-group">
-            <label for="fullName">Full Name</label>
-            <input 
-              type="text" 
-              id="fullName" 
-              value={user?.user_metadata?.full_name || ''} 
-              placeholder="Enter your full name"
-            />
-          </div>
-          
-          <div class="form-group">
-            <label for="email">Email</label>
-            <input 
-              type="email" 
-              id="email" 
-              value={user?.email || ''} 
-              disabled
-            />
-            <small>Email cannot be changed</small>
-          </div>
-          
-          <div class="form-group">
-            <label for="bio">Bio</label>
-            <textarea 
-              id="bio" 
-              placeholder="Tell us about yourself..."
-              rows="3"
-            ></textarea>
-          </div>
-          
-          <button class="save-btn">Save Changes</button>
-        </div>
-      </div>
+      </section>
     </div>
+
+    <section class="card settings-card animate-in delay-4">
+      <h2>Profile Settings</h2>
+      <form method="POST" action="?/updateProfile" use:enhance class="settings-form">
+        <div class="field">
+          <label for="fullName">Full Name</label>
+          <input id="fullName" name="fullName" type="text" bind:value={fullName} placeholder="Your name" />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" type="email" value={user?.email || ''} disabled />
+          <small>Email cannot be changed.</small>
+        </div>
+        <div class="field">
+          <label for="bio">Bio</label>
+          <textarea id="bio" name="bio" rows="3" bind:value={bio} placeholder="Tell us about yourself"></textarea>
+        </div>
+        <button type="submit" class="btn-primary btn-save">Save Changes</button>
+      </form>
+    </section>
   {/if}
 </div>
 
 <style>
-  .dashboard-page {
-    max-width: 1200px;
+  .profile-page {
+    max-width: 1100px;
     margin: 0 auto;
-    padding: 2rem;
+    padding: 2.5rem 2rem 4rem;
   }
-  
-  .success-message {
-    background: var(--primary-color);
-    color: white;
-    padding: 1rem 1.5rem;
-    border-radius: 8px;
-    margin-bottom: 2rem;
+
+  .banner {
     text-align: center;
+    padding: 0.85rem 1rem;
+    border-radius: var(--radius);
+    margin-bottom: 1.5rem;
+    font-size: 0.92rem;
+    font-weight: 700;
   }
-  
-  .success-message h3 {
-    margin: 0 0 0.5rem 0;
+
+  .banner-success {
+    background: rgba(72, 191, 227, 0.12);
+    border: 1px solid color-mix(in srgb, var(--color-tertiary) 55%, var(--border));
+    color: var(--color-tertiary);
   }
-  
-  .success-message p {
-    margin: 0;
-    opacity: 0.9;
+
+  .banner-error {
+    background: rgba(220, 53, 69, 0.1);
+    border: 1px solid var(--danger);
+    color: var(--danger);
   }
-  
-  .dashboard-header {
+
+  .profile-header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
-    padding: 2rem;
-    background: var(--surface);
-    border-radius: 12px;
+    gap: 1.25rem;
+    padding: 1.5rem;
     border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--secondary-background);
+    margin-bottom: 1.25rem;
   }
-  
-  .user-info {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-  
-  .user-avatar {
-    width: 80px;
-    height: 80px;
+
+  .avatar-area {
+    width: 72px;
+    height: 72px;
+    flex-shrink: 0;
     border-radius: 50%;
     overflow: hidden;
-    border: 3px solid var(--primary-color);
+    border: 2px solid color-mix(in srgb, var(--color-primary) 50%, var(--border));
   }
-  
-  .user-avatar img {
+
+  .avatar-img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    display: block;
   }
-  
+
   .avatar-placeholder {
     width: 100%;
     height: 100%;
-    background: var(--primary-color);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2rem;
-    font-weight: bold;
-  }
-  
-  .user-details h1 {
-    margin: 0 0 0.5rem 0;
-    color: var(--text);
-  }
-  
-  .user-role {
-    margin: 0;
-    color: var(--muted);
-    font-size: 0.9rem;
-  }
-  
-  .quick-actions {
-    display: flex;
-    gap: 1rem;
-  }
-  
-  .action-btn {
-    padding: 0.75rem 1.5rem;
-    background: var(--primary-color);
-    color: white;
-    text-decoration: none;
-    border-radius: 8px;
-    font-weight: 500;
-    transition: background 0.2s;
-  }
-  
-  .action-btn:hover {
-    background: var(--primary-dark);
-  }
-  
-  .action-btn.secondary {
-    background: var(--secondary-background);
-    color: var(--text);
-    border: 1px solid var(--border);
-  }
-  
-  .action-btn.secondary:hover {
-    background: var(--border);
-  }
-  
-  .analytics-grid {
+    background: var(--color-primary);
+    color: #fff;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
+    place-items: center;
+    font-size: 1.6rem;
+    font-weight: 900;
   }
-  
-  .stat-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
+
+  .header-text {
+    flex: 1;
+    min-width: 0;
   }
-  
-  .stat-icon {
-    font-size: 2rem;
-  }
-  
-  .stat-content h3 {
-    margin: 0 0 0.25rem 0;
-    font-size: 2rem;
-    color: var(--primary-color);
-  }
-  
-  .stat-content p {
+
+  .header-text h1 {
     margin: 0;
+    font-size: 1.35rem;
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .role-label {
+    margin: 0.2rem 0 0;
     color: var(--muted);
-    font-size: 0.9rem;
+    font-size: 0.88rem;
+    font-weight: 700;
   }
-  
-  .dashboard-content {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    gap: 2rem;
+
+  .header-actions {
+    display: flex;
+    gap: 0.55rem;
+    flex-shrink: 0;
   }
-  
-  .content-section {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1.5rem;
-  }
-  
-  .content-section h2 {
-    margin: 0 0 1.5rem 0;
-    color: var(--text);
-    font-size: 1.5rem;
-  }
-  
-  .empty-state {
-    text-align: center;
-    padding: 2rem;
-    color: var(--muted);
-  }
-  
-  .empty-state p {
-    margin-bottom: 1rem;
-  }
-  
-  .cta-btn {
+
+  .btn-primary,
+  .btn-secondary {
     display: inline-block;
-    padding: 0.75rem 1.5rem;
-    background: var(--primary-color);
-    color: white;
-    text-decoration: none;
+    padding: 0.55rem 1.15rem;
     border-radius: 8px;
-    font-weight: 500;
-  }
-  
-  .progress-list, .orders-list {
-    margin-bottom: 1rem;
-  }
-  
-  .progress-item, .order-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 0;
-    border-bottom: 1px solid var(--border);
-  }
-  
-  .progress-item:last-child, .order-item:last-child {
-    border-bottom: none;
-  }
-  
-  .progress-info h4, .order-info h4 {
-    margin: 0 0 0.25rem 0;
-    color: var(--text);
-  }
-  
-  .progress-date, .order-date {
-    margin: 0;
-    color: var(--muted);
+    text-decoration: none;
+    font-weight: 800;
     font-size: 0.9rem;
-  }
-  
-  .status {
-    padding: 0.25rem 0.5rem;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: 500;
-  }
-  
-  .status.completed {
-    background: var(--primary-color);
-    color: white;
-  }
-  
-  .status.in-progress {
-    background: var(--warning);
-    color: white;
-  }
-  
-  .status.not-started {
-    background: var(--secondary-background);
-    color: var(--muted);
-  }
-  
-  .order-total {
-    font-weight: 600;
-    color: var(--primary-color);
-  }
-  
-  .view-all-btn {
-    display: block;
-    text-align: center;
-    padding: 0.75rem;
-    background: var(--secondary-background);
-    color: var(--text);
-    text-decoration: none;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    transition: background 0.2s;
-  }
-  
-  .view-all-btn:hover {
-    background: var(--border);
-  }
-  
-  .kits-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 1rem;
-  }
-  
-  .kit-card {
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    overflow: hidden;
-    transition: transform 0.2s;
-  }
-  
-  .kit-card:hover {
-    transform: translateY(-2px);
-  }
-  
-  .kit-image {
-    width: 100%;
-    height: 100px;
-    overflow: hidden;
-  }
-  
-  .kit-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  
-  .kit-info {
-    padding: 1rem;
-  }
-  
-  .kit-info h4 {
-    margin: 0 0 0.5rem 0;
-    font-size: 1rem;
-    color: var(--text);
-  }
-  
-  .kit-level, .kit-theme {
-    margin: 0 0 0.25rem 0;
-    font-size: 0.8rem;
-    color: var(--muted);
-  }
-  
-  .profile-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-  
-  .form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  
-  .form-group label {
-    font-weight: 500;
-    color: var(--text);
-  }
-  
-  .form-group input, .form-group textarea {
-    padding: 0.75rem;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--background);
-    color: var(--text);
-    font-size: 1rem;
-  }
-  
-  .form-group input:focus, .form-group textarea:focus {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-  }
-  
-  .form-group input:disabled {
-    background: var(--secondary-background);
-    color: var(--muted);
-  }
-  
-  .form-group small {
-    color: var(--muted);
-    font-size: 0.8rem;
-  }
-  
-  .save-btn {
-    padding: 0.75rem 1.5rem;
-    background: var(--primary-color);
-    color: white;
     border: none;
-    border-radius: 8px;
-    font-weight: 500;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+  }
+
+  .btn-primary {
+    background: var(--color-primary);
+    color: #fff;
+  }
+
+  .btn-secondary {
+    background: var(--color-background);
+    border: 1px solid var(--border);
+    color: var(--color-text);
+  }
+
+  .btn-primary:hover,
+  .btn-secondary:hover {
+    transform: translateY(-1px);
+    opacity: 0.9;
+  }
+
+  .btn-sm {
+    padding: 0.45rem 0.95rem;
+    font-size: 0.85rem;
+  }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.85rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .stat-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--secondary-background);
+    padding: 1rem;
+    text-align: center;
+  }
+
+  .stat-num {
+    display: block;
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: var(--color-primary);
+    line-height: 1.1;
+  }
+
+  .stat-label {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 0.82rem;
+    color: var(--muted);
+    font-weight: 700;
+  }
+
+  .grid-two {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--secondary-background);
+    padding: 1.25rem;
+  }
+
+  .card h2 {
+    margin: 0 0 1rem;
+    font-size: var(--font-size-h3);
+    color: var(--color-text);
+  }
+
+  .empty {
+    text-align: center;
+    padding: 1.5rem 0;
+    color: var(--muted);
+  }
+
+  .empty p {
+    margin: 0 0 0.8rem;
+  }
+
+  .kit-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .kit-row {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+  }
+
+  .kit-thumb {
+    width: 52px;
+    height: 52px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .kit-row strong {
+    display: block;
+    color: var(--color-text);
+    font-size: 0.92rem;
+  }
+
+  .kit-meta {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .order-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .order-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .order-row > div {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .order-row strong {
+    display: block;
+    color: var(--color-text);
+    font-size: 0.92rem;
+  }
+
+  .order-date {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .order-badge {
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: capitalize;
+    background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+    color: var(--color-primary);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 35%, var(--border));
+  }
+
+  .order-badge.completed {
+    background: rgba(72, 191, 227, 0.12);
+    color: var(--color-tertiary);
+    border-color: color-mix(in srgb, var(--color-tertiary) 35%, var(--border));
+  }
+
+  .order-amount {
+    font-weight: 800;
+    color: var(--color-text);
+    font-size: 0.92rem;
+    flex-shrink: 0;
+  }
+
+  .settings-card {
+    max-width: 620px;
+  }
+
+  .settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .field label {
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: var(--color-text);
+  }
+
+  .field input,
+  .field textarea {
+    padding: 0.6rem 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--color-background);
+    color: var(--color-text);
+    font-size: 0.95rem;
+  }
+
+  .field input:focus,
+  .field textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+  }
+
+  .field input:disabled {
+    background: var(--secondary-background);
+    color: var(--muted);
+    cursor: not-allowed;
+  }
+
+  .field small {
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+
+  .btn-save {
     align-self: flex-start;
   }
-  
-  .save-btn:hover {
-    background: var(--primary-dark);
-  }
-  
-  .error {
-    background: var(--danger);
-    color: white;
-    padding: 1rem;
-    border-radius: 8px;
-    text-align: center;
-  }
-  
+
   @media (max-width: 768px) {
-    .dashboard-header {
+    .profile-header {
       flex-direction: column;
-      gap: 1rem;
       text-align: center;
     }
-    
-    .quick-actions {
-      width: 100%;
-      justify-content: center;
+
+    .header-text h1 {
+      white-space: normal;
     }
-    
-    .analytics-grid {
+
+    .stats-row {
       grid-template-columns: repeat(2, 1fr);
     }
-    
-    .dashboard-content {
+
+    .grid-two {
       grid-template-columns: 1fr;
     }
   }
-</style> 
+</style>

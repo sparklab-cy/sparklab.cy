@@ -174,12 +174,7 @@
 
 	.hero::before {
 		content: '';
-		position: absolute;
-		inset: 0;
-		background:
-			radial-gradient(85% 65% at 50% 10%, rgba(116, 118, 252, 0.32) 0%, rgba(116, 118, 252, 0) 70%),
-			linear-gradient(180deg, rgba(20, 20, 22, 0.05) 0%, rgba(20, 20, 22, 0.78) 100%);
-		z-index: 0;
+		display: none;
 	}
 
 	.hero-overlay {
@@ -222,7 +217,7 @@
 		letter-spacing: 0.14em;
 		text-transform: uppercase;
 		font-weight: 700;
-		color: var(--color-secondary);
+		color: var(--color-primary);
 	}
 
 	h1 {
@@ -247,7 +242,7 @@
 		padding: 0.75rem 1.8rem;
 		border-radius: 999px;
 		border: 1px solid color-mix(in srgb, var(--color-primary) 45%, var(--border));
-		background: color-mix(in srgb, var(--color-primary) 65%, transparent);
+		background: var(--color-primary);
 		color: #fff;
 		text-decoration: none;
 		font-weight: 700;
@@ -255,8 +250,8 @@
 	}
 
 	.hero-cta:hover {
-		transform: translateY(-2px);
-		box-shadow: 0 12px 32px rgba(116, 118, 252, 0.3);
+		transform: translateY(-1px);
+		opacity: 0.9;
 	}
 
 	.chapter,

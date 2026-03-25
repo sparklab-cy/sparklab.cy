@@ -76,9 +76,6 @@
 				<button type="button" class="dropdown-item" onclick={() => goto('/profile')} role="menuitem">
 					<FontAwesomeIcon icon={faUser} /> View Profile
 				</button>
-				<button type="button" class="dropdown-item" onclick={() => goto('/settings')} role="menuitem">
-					<FontAwesomeIcon icon={faGear} /> Settings
-				</button>
 
 				<button type="button" class="dropdown-item" onclick={() => goto('/courses')} role="menuitem">
 					<FontAwesomeIcon icon={faChalkboardUser} /> My Courses

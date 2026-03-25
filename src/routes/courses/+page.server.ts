@@ -1,12 +1,15 @@
 import type { PageServerLoad, Actions } from './$types';
 import { redirect } from '@sveltejs/kit';
 
-export const load: PageServerLoad = async ({ url, locals }) => {
+export const load: PageServerLoad = async ({ url, locals, parent }) => {
   const selectedKit = url.searchParams.get('kit');
   const { user, supabase } = locals;
+
+  const parentData = await parent();
+  const userRole: string = parentData.profile?.role ?? 'user';
+  const isTeacherOrAdmin = userRole === 'teacher' || userRole === 'admin';
   
   try {
-    // Load kits
     const { data: kits, error: kitsError } = await supabase
       .from('kits')
       .select('*')
@@ -14,7 +17,6 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     
     if (kitsError) throw kitsError;
 
-    // Load user's purchased kits if logged in
     let userKits: string[] = [];
     if (user) {
       const { data: userPermissions } = await supabase
@@ -26,7 +28,6 @@ export const load: PageServerLoad = async ({ url, locals }) => {
       userKits = (userPermissions || []).map(p => p.kit_id);
     }
 
-    // Load official courses (only for kits user has access to)
     let officialCourses: any[] = [];
     
     if (selectedKit) {
@@ -40,7 +41,6 @@ export const load: PageServerLoad = async ({ url, locals }) => {
       if (error) throw error;
       officialCourses = data || [];
     } else if (userKits.length > 0) {
-      // Filter to only show courses for kits the user owns
       const { data, error } = await supabase
         .from('official_courses')
         .select('*')
@@ -50,45 +50,10 @@ export const load: PageServerLoad = async ({ url, locals }) => {
       
       if (error) throw error;
       officialCourses = data || [];
-    } else {
-      // If user has no kits, return empty array
-      officialCourses = [];
     }
 
-    // Load custom courses (only for kits user has access to)
-    let customCourses: any[] = [];
-    
-    if (selectedKit) {
-      const { data, error } = await supabase
-        .from('custom_courses')
-        .select(`*`)
-        .eq('is_published', true)
-        .eq('is_public', true)
-        .eq('kit_id', selectedKit)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      customCourses = data || [];
-    } else if (userKits.length > 0) {
-      // Filter to only show courses for kits the user owns
-      const { data, error } = await supabase
-        .from('custom_courses')
-        .select(`*`)
-        .eq('is_published', true)
-        .eq('is_public', true)
-        .in('kit_id', userKits)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      customCourses = data || [];
-    } else {
-      // If user has no kits, return empty array
-      customCourses = [];
-    }
-
-    // Load the user's own courses (as creator) when they own kits
     let userCourses: any[] = [];
-    if (user && userKits.length > 0) {
+    if (user && isTeacherOrAdmin && userKits.length > 0) {
       const { data } = await supabase
         .from('custom_courses')
         .select('*, kits:kit_id(name, theme, level)')
@@ -100,11 +65,11 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     return {
       kits: kits || [],
       officialCourses: officialCourses || [],
-      customCourses: customCourses || [],
       userCourses,
       selectedKit,
       userKits,
-      canCreateCourses: userKits.length > 0,
+      userRole,
+      canCreateCourses: isTeacherOrAdmin && userKits.length > 0,
       error: null
     };
 
@@ -113,10 +78,10 @@ export const load: PageServerLoad = async ({ url, locals }) => {
     return {
       kits: [],
       officialCourses: [],
-      customCourses: [],
       userCourses: [],
       selectedKit,
       userKits: [],
+      userRole,
       canCreateCourses: false,
       error: 'Failed to load courses'
     };
@@ -128,13 +93,22 @@ export const actions: Actions = {
     const { user, supabase } = locals;
     if (!user) return { success: false, error: 'Please log in' };
 
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    const role = profile?.role ?? 'user';
+    if (role !== 'teacher' && role !== 'admin') {
+      return { success: false, error: 'Only teachers and admins can create courses' };
+    }
+
     const formData = await request.formData();
     const title = formData.get('title') as string;
     const description = formData.get('description') as string;
     const kitId = formData.get('kitId') as string;
-    const isPublic = formData.get('isPublic') === 'true';
 
-    // Verify the user has access to this kit
     const { data: permission } = await supabase
       .from('user_permissions')
       .select('id')
@@ -155,7 +129,7 @@ export const actions: Actions = {
         title,
         description,
         price: 0,
-        is_public: isPublic,
+        is_public: false,
         is_published: false
       })
       .select()

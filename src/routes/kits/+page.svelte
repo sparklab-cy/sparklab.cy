@@ -2,7 +2,7 @@
 	type KitCard = {
 		title: string;
 		description: string;
-		image: string;
+		image?: string;
 		tags: string[];
 		status?: 'current' | 'coming';
 	};
@@ -12,14 +12,14 @@
 		{
 			title: 'Starter Circuits Kit',
 			description: 'A beginner-friendly kit to learn the basics: power, LEDs, buttons, and simple sensors.',
-			image: '/default-kit-image.jpg',
+			image: undefined,
 			tags: ['Level 1', 'Basics', 'Hands-on'],
 			status: 'current',
 		},
 		{
 			title: 'Motion and Light Kit',
 			description: 'Build interactive projects using motion detection and light control with modular components.',
-			image: '/default-kit-image.jpg',
+			image: undefined,
 			tags: ['Level 2', 'Sensors', 'Creative builds'],
 			status: 'current',
 		},
@@ -29,35 +29,35 @@
 		{
 			title: 'Smart Home Mini Kit',
 			description: 'Explore automation with switches, relays, and simple IoT-style interactions.',
-			image: '/default-kit-image.jpg',
+			image: undefined,
 			tags: ['Coming Soon', 'Home Tech', 'Automation'],
 			status: 'coming',
 		},
 		{
 			title: 'Robot Rover Kit',
 			description: 'Learn motion, control, and feedback with a small rover build and guided challenges.',
-			image: '/default-kit-image.jpg',
+			image: undefined,
 			tags: ['Coming Soon', 'Robotics', 'Control'],
 			status: 'coming',
 		},
 		{
 			title: 'Sound and Music Kit',
 			description: 'Turn code into sound: buzzers, tones, patterns, and interactive music projects.',
-			image: '/default-kit-image.jpg',
+			image: undefined,
 			tags: ['Coming Soon', 'Audio', 'Creative'],
 			status: 'coming',
 		},
 		{
 			title: 'Environment Lab Kit',
 			description: 'Measure temperature, humidity, and more, then visualize your data and learn calibration.',
-			image: '/default-kit-image.jpg',
+			image: undefined,
 			tags: ['Coming Soon', 'Data', 'Environment'],
 			status: 'coming',
 		},
 		{
 			title: 'Wearables Kit',
 			description: 'Build light-up, responsive wearables with safe power, compact modules, and fun patterns.',
-			image: '/default-kit-image.jpg',
+			image: undefined,
 			tags: ['Coming Soon', 'Wearables', 'Design'],
 			status: 'coming',
 		},
@@ -81,9 +81,11 @@
 		<div class="kits-grid">
 			{#each currentKits as kit, i}
 				<article class="kit-card animate-in delay-{i + 1}">
-					<div class="kit-image">
-						<img src={kit.image} alt={kit.title} />
-					</div>
+					{#if kit.image}
+						<div class="kit-image">
+							<img src={kit.image} alt={kit.title} />
+						</div>
+					{/if}
 					<div class="kit-body">
 						<h3>{kit.title}</h3>
 						<p class="kit-desc">{kit.description}</p>
@@ -107,11 +109,16 @@
 		<div class="kits-grid">
 			{#each comingKits as kit, i}
 				<article class="kit-card coming animate-in delay-{i + 1}">
-					<div class="kit-image">
-						<img src={kit.image} alt={kit.title} />
-						<div class="badge">Coming</div>
-					</div>
+					{#if kit.image}
+						<div class="kit-image">
+							<img src={kit.image} alt={kit.title} />
+							<div class="badge">Coming</div>
+						</div>
+					{/if}
 					<div class="kit-body">
+						{#if !kit.image}
+							<div class="badge badge-body">Coming</div>
+						{/if}
 						<h3>{kit.title}</h3>
 						<p class="kit-desc">{kit.description}</p>
 						<div class="tags">
@@ -190,13 +197,6 @@
 		border-radius: var(--radius);
 		overflow: hidden;
 		background: var(--secondary-background);
-		transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
-	}
-
-	.kit-card:hover {
-		transform: translateY(-3px);
-		border-color: color-mix(in srgb, var(--color-primary) 55%, var(--border));
-		box-shadow: 0 14px 36px rgba(116, 118, 252, 0.14);
 	}
 
 	.kit-image {
@@ -227,6 +227,14 @@
 		border: 1px solid rgba(255, 255, 255, 0.14);
 		backdrop-filter: blur(10px);
 		-webkit-backdrop-filter: blur(10px);
+	}
+
+	.badge.badge-body {
+		position: relative;
+		top: auto;
+		left: auto;
+		margin: 0 0 0.95rem;
+		display: inline-block;
 	}
 
 	.kit-body {
