@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { enhance } from '$app/forms';
   import { cart } from '$lib/stores/cart';
@@ -16,6 +17,39 @@
   let selectedTheme = $state('all');
   let sortBy = $state('name');
   
+	// Countdown to the shop opening date
+	// Note: target year rolls over if the date has already passed.
+	const nowAtInit = new Date();
+	const targetYear =
+		nowAtInit.getMonth() > 2 || (nowAtInit.getMonth() === 2 && nowAtInit.getDate() > 28)
+			? nowAtInit.getFullYear() + 1
+			: nowAtInit.getFullYear();
+	const targetDate = new Date(targetYear, 2, 28, 23, 59, 59, 999);
+	const targetTime = targetDate.getTime();
+
+	let nowMs = $state(Date.now());
+
+	const remainingMs = $derived(Math.max(targetTime - nowMs, 0));
+	const isLive = $derived(remainingMs <= 0);
+	const remainingSeconds = $derived(Math.floor(remainingMs / 1000));
+
+	const days = $derived(Math.floor(remainingSeconds / 86400));
+	const hours = $derived(Math.floor((remainingSeconds % 86400) / 3600));
+	const minutes = $derived(Math.floor((remainingSeconds % 3600) / 60));
+	const seconds = $derived(remainingSeconds % 60);
+
+	function pad2(n: number) {
+		return n.toString().padStart(2, '0');
+	}
+
+	onMount(() => {
+		const id = window.setInterval(() => {
+			nowMs = Date.now();
+		}, 1000);
+
+		return () => window.clearInterval(id);
+	});
+
   // Available filters
   const levels = ['all', ...Array.from(new Set(kits.map(kit => kit.level)))];
   const themes = ['all', ...Array.from(new Set(kits.map(kit => kit.theme)))];
@@ -81,109 +115,139 @@
   {#if error}
 	<div class="message error">{error}</div>
   {:else}
-	<!-- Search and Filters -->
-	<div class="search-filters">
-	  <div class="search-bar">
-		<input 
-		  type="text" 
-		  placeholder="Search kits by name, description, or theme..."
-		  bind:value={searchQuery}
-		/>
-	  </div>
-	  
-	  <div class="filters">
-		<select bind:value={selectedLevel}>
-		  {#each levels as level}
-			<option value={level}>
-			  {level === 'all' ? 'All Levels' : `Level ${level}`}
-			</option>
-		  {/each}
-		</select>
-		
-		<select bind:value={selectedTheme}>
-		  {#each themes as theme}
-			<option value={theme}>
-			  {theme === 'all' ? 'All Themes' : theme}
-			</option>
-		  {/each}
-		</select>
-		
-		<select bind:value={sortBy}>
-		  <option value="name">Sort by Name</option>
-		  <option value="price-low">Price: Low to High</option>
-		  <option value="price-high">Price: High to Low</option>
-		  <option value="level">Sort by Level</option>
-		</select>
-		
-		<button on:click={clearFilters} class="clear-filters">
-		  Clear Filters
-		</button>
-	  </div>
-	  
-	  <div class="results-count">
-		{filteredKits.length} kit{filteredKits.length !== 1 ? 's' : ''} found
-	  </div>
-	</div>
-	
-	<!-- Kits Section -->
-	<section class="shop-section">
-	  <h2>Available Kits</h2>
-	  <p>Purchase kits to unlock official courses and create your own community courses.</p>
-	  
-	  <div class="kits-grid">
-		{#each filteredKits as kit}
-		  <div class="kit-card">
-			<div class="kit-image">
-			  <img src={kit.image_url || '/default-kit-image.jpg'} alt={kit.name} />
-			</div>
-			<div class="kit-content">
-			  <div class="kit-header">
-				<h3>{kit.name}</h3>
-				<span class="level">Level {kit.level}</span>
+		{#if !isLive}
+			<section class="coming-soon" aria-live="polite">
+				<div class="coming-soon-inner">
+					<h2>Coming Soon</h2>
+					<p class="coming-soon-sub">
+						ByteBlocks Shop opens on <span class="date">March 28</span>.
+					</p>
+
+					<div class="countdown">
+						<div class="time-box">
+							<div class="time-num">{days}</div>
+							<div class="time-label">Days</div>
+						</div>
+						<div class="time-box">
+							<div class="time-num">{pad2(hours)}</div>
+							<div class="time-label">Hours</div>
+						</div>
+						<div class="time-box">
+							<div class="time-num">{pad2(minutes)}</div>
+							<div class="time-label">Minutes</div>
+						</div>
+						<div class="time-box">
+							<div class="time-num">{pad2(seconds)}</div>
+							<div class="time-label">Seconds</div>
+						</div>
+					</div>
+				</div>
+			</section>
+		{:else}
+			<!-- Search and Filters -->
+			<div class="search-filters">
+			  <div class="search-bar">
+				<input 
+				  type="text" 
+				  placeholder="Search kits by name, description, or theme..."
+				  bind:value={searchQuery}
+				/>
 			  </div>
-			  <p class="theme">{kit.theme}</p>
-			  <p class="description">{kit.description}</p>
-			  <div class="price">${kit.price}</div>
 			  
-			  <div class="kit-actions">
-				<a href="/shop/{kit.id}" class="view-details-btn">View Details</a>
+			  <div class="filters">
+				<select bind:value={selectedLevel}>
+				  {#each levels as level}
+					<option value={level}>
+					  {level === 'all' ? 'All Levels' : `Level ${level}`}
+					</option>
+				  {/each}
+				</select>
 				
-				{#if hasKitAccess(kit.id)}
-				  <div class="owned-badge">Owned</div>
-				{:else}
-				  <div class="purchase-options">
-					<button 
-					  type="button" 
-					  class="add-to-cart-btn"
-					  on:click={() => addToCart(kit)}
-					>
-					  Add to Cart
-					</button>
-					<form method="POST" action="?/purchaseKit" use:enhance>
-					  <input type="hidden" name="kitId" value={kit.id} />
-					  <button type="submit" class="purchase-btn">
-						Buy Now
-					  </button>
-					</form>
-				  </div>
-				{/if}
+				<select bind:value={selectedTheme}>
+				  {#each themes as theme}
+					<option value={theme}>
+					  {theme === 'all' ? 'All Themes' : theme}
+					</option>
+				  {/each}
+				</select>
+				
+				<select bind:value={sortBy}>
+				  <option value="name">Sort by Name</option>
+				  <option value="price-low">Price: Low to High</option>
+				  <option value="price-high">Price: High to Low</option>
+				  <option value="level">Sort by Level</option>
+				</select>
+				
+				<button on:click={clearFilters} class="clear-filters">
+				  Clear Filters
+				</button>
+			  </div>
+			  
+			  <div class="results-count">
+				{filteredKits.length} kit{filteredKits.length !== 1 ? 's' : ''} found
 			  </div>
 			</div>
-		  </div>
-		{/each}
-	  </div>
-	</section>
-	
-	<!-- Community Courses Link -->
-	<section class="shop-section">
-	  <div class="community-courses-link">
-		<h2>Community Courses</h2>
-		<p>Discover amazing courses created by the ByteBlocks community. Learn from fellow makers and share your knowledge.</p>
-		<a href="/shop/community-courses" class="community-btn">
-		  Browse Community Courses
-		</a>
-	  </div>
-	</section>
+			
+			<!-- Kits Section -->
+			<section class="shop-section">
+			  <h2>Available Kits</h2>
+			  <p>Purchase kits to unlock official courses and create your own community courses.</p>
+			  
+			  <div class="kits-grid">
+				{#each filteredKits as kit}
+				  <div class="kit-card">
+					<div class="kit-image">
+					  <img src={kit.image_url || '/default-kit-image.jpg'} alt={kit.name} />
+					</div>
+					<div class="kit-content">
+					  <div class="kit-header">
+						<h3>{kit.name}</h3>
+						<span class="level">Level {kit.level}</span>
+					  </div>
+					  <p class="theme">{kit.theme}</p>
+					  <p class="description">{kit.description}</p>
+					  <div class="price">${kit.price}</div>
+					  
+					  <div class="kit-actions">
+						<a href="/shop/{kit.id}" class="view-details-btn">View Details</a>
+						
+						{#if hasKitAccess(kit.id)}
+						  <div class="owned-badge">Owned</div>
+						{:else}
+						  <div class="purchase-options">
+							  <button
+								type="button"
+								class="add-to-cart-btn"
+								on:click={() => addToCart(kit)}
+							  >
+								Add to Cart
+							  </button>
+							  <form method="POST" action="?/purchaseKit" use:enhance>
+								<input type="hidden" name="kitId" value={kit.id} />
+								<button type="submit" class="purchase-btn">
+								  Buy Now
+								</button>
+							  </form>
+						  </div>
+						{/if}
+					  </div>
+					</div>
+				  </div>
+				{/each}
+			  </div>
+			</section>
+			
+			<!-- Community Courses Link -->
+			<section class="shop-section">
+			  <div class="community-courses-link">
+				<h2>Community Courses</h2>
+				<p>Discover amazing courses created by the ByteBlocks community. Learn from fellow makers and share your knowledge.</p>
+				<a href="/shop/community-courses" class="community-btn">
+				  Browse Community Courses
+				</a>
+			  </div>
+			</section>
+		{/if}
   {/if}
 </div>
 
@@ -192,7 +256,74 @@
 	max-width: 1200px;
 	margin: 0 auto;
 	padding: 2rem;
-	background: var(--color-background);
+  }
+
+  .coming-soon {
+	border: none;
+	border-radius: 0;
+	background: transparent;
+	padding: 3rem 0 4rem;
+	margin: 0;
+	text-align: center;
+  }
+
+  .coming-soon-inner {
+	max-width: 900px;
+	margin: 0 auto;
+  }
+
+  .coming-soon h2 {
+	color: var(--color-primary);
+	margin: 0 0 0.5rem;
+	font-size: var(--font-size-h2);
+  }
+
+  .coming-soon-sub {
+	margin: 0 0 1.25rem;
+	color: var(--color-text);
+	font-size: var(--font-size);
+  }
+
+  .coming-soon-sub .date {
+	font-weight: 800;
+	color: var(--color-primary);
+  }
+
+  .countdown {
+	display: flex;
+	gap: 1rem;
+	justify-content: center;
+	flex-wrap: wrap;
+  }
+
+  .time-box {
+	min-width: 110px;
+	border: none;
+	border-radius: 0;
+	background: transparent;
+	padding: 0.85rem 1rem;
+  }
+
+  .time-num {
+	font-size: 1.65rem;
+	font-weight: 900;
+	color: var(--color-text);
+	line-height: 1.1;
+  }
+
+  .time-label {
+	margin-top: 0.35rem;
+	color: var(--muted);
+	font-weight: 600;
+	font-size: var(--font-size-sm);
+  }
+
+  .add-to-cart-btn:disabled,
+  .purchase-btn:disabled {
+	opacity: 0.65;
+	cursor: not-allowed;
+	border-color: var(--border);
+	background: var(--secondary-background);
   }
   
   .shop-page h1 {
