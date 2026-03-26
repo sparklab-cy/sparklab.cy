@@ -1,6 +1,19 @@
 <script lang="ts">
+	import { afterNavigate } from '$app/navigation';
 	import { page } from '$app/state';
 	import CartIcon from './CartIcon.svelte';
+	import ThemeToggle from './ThemeToggle.svelte';
+	import UserStatus from './UserStatus.svelte';
+
+	type UserStatusPayload = {
+		loggedIn: boolean;
+		avatar_url?: string;
+		full_name?: string;
+		email?: string;
+		role?: string;
+	};
+
+	const { userStatus } = $props<{ userStatus: UserStatusPayload }>();
 
 	const currentPath = $derived(page.url.pathname);
 	const isShop = $derived(currentPath.startsWith('/shop'));
@@ -14,6 +27,10 @@
 	function closeMenu() {
 		menuOpen = false;
 	}
+
+	afterNavigate(() => {
+		menuOpen = false;
+	});
 </script>
 
 <nav class="navigation">
@@ -58,6 +75,12 @@
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<div class="mobile-overlay" onclick={closeMenu}></div>
 	<div class="mobile-menu">
+		<div class="mobile-menu-user">
+			<div class="mobile-menu-header-row">
+				<ThemeToggle />
+				<UserStatus user={userStatus} />
+			</div>
+		</div>
 		<a href="/" class="mobile-link" class:active={currentPath === '/'} onclick={closeMenu}>Home</a>
 		<a href="/about" class="mobile-link" class:active={currentPath.startsWith('/about')} onclick={closeMenu}>About</a>
 		<a href="/kits" class="mobile-link" class:active={currentPath.startsWith('/kits')} onclick={closeMenu}>Kits</a>
@@ -262,6 +285,29 @@
 			border-bottom: 1px solid var(--border);
 			padding: 0.75rem 0;
 			animation: slideDown 0.25s ease;
+		}
+
+		.mobile-menu-user {
+			padding: 0.5rem 1.5rem 1rem;
+			border-bottom: 1px solid var(--border);
+		}
+
+		.mobile-menu-header-row {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 1rem;
+		}
+
+		.mobile-menu-user :global(.user-container) {
+			display: block;
+			flex-shrink: 0;
+		}
+
+		.mobile-menu-user :global(.dropdown-menu) {
+			width: min(100%, 280px);
+			right: auto;
+			left: 0;
 		}
 
 		.mobile-link {

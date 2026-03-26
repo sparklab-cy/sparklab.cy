@@ -82,9 +82,17 @@
 <MeshBackground />
 
 <main>
-    <Navigation />
+    <Navigation
+        userStatus={{
+            loggedIn: user !== null,
+            avatar_url: user?.user_metadata.avatar_url,
+            full_name: user?.user_metadata.full_name,
+            email: user?.email,
+            role: profile?.role
+        }}
+    />
     
-	<div class="top-right-controls">
+	<div class="top-right-controls header-controls-desktop">
         <ThemeToggle />
         <UserStatus user={ {
             loggedIn: user !== null,
@@ -217,5 +225,11 @@
         display: flex;
         align-items: center;
         gap: 0.75rem;
+    }
+
+    @media (max-width: 768px) {
+        .header-controls-desktop {
+            display: none;
+        }
     }
 </style>
