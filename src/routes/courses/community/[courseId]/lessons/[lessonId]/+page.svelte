@@ -106,7 +106,7 @@
   }
   
   .lesson-header h1 {
-    color: var(--text);
+    color: var(--color-text);
     margin-bottom: 1rem;
     font-size: 2rem;
   }
@@ -127,7 +127,7 @@
   }
   
   .completed {
-    background: var(--primary-color);
+    background: var(--color-primary);
     color: white;
   }
   
@@ -161,7 +161,7 @@
   
   .complete-btn {
     padding: 0.75rem 1.5rem;
-    background: var(--primary-color);
+    background: var(--color-primary);
     color: white;
     border: none;
     border-radius: 8px;
@@ -172,7 +172,7 @@
   }
   
   .complete-btn:hover:not(:disabled) {
-    background: var(--primary-dark);
+    background: var(--color-accent);
   }
   
   .complete-btn:disabled {
@@ -183,7 +183,7 @@
   .completed-btn {
     padding: 0.75rem 1.5rem;
     background: var(--muted);
-    color: var(--text);
+    color: var(--color-text);
     border: none;
     border-radius: 8px;
     cursor: not-allowed;

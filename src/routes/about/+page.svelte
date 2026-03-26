@@ -47,21 +47,21 @@
 	// TODO: Replace with real team details when ready.
 	const team: TeamMember[] = [
 		{
-			name: 'Team Member 1',
-			role: 'Co-Founder and Product',
-			bio: 'Owns product direction and keeps every release aligned with real learner outcomes.',
+			name: 'Michalis Chatzittofi',
+			role: 'CEO and Engineering Lead',
+			bio: 'Leads product direction and engineering. Keeps every release aligned with real learner outcomes.',
 			color: 'primary',
 		},
 		{
-			name: 'Team Member 2',
-			role: 'Engineering Lead',
-			bio: 'Builds the platform and kit workflows so ideas become fast, stable, and repeatable.',
+			name: 'Mariia Bivol',
+			role: 'CMO',
+			bio: 'Leads marketing and community. Handles customer support and feedback.',
 			color: 'secondary',
 		},
 		{
-			name: 'Team Member 3',
-			role: 'Education and Community',
-			bio: 'Designs learning journeys and gathers classroom feedback to sharpen every lesson.',
+			name: 'Anna Maria Vidouri',
+			role: 'CFO',
+			bio: 'Handles financials and operations. Ensures the company is financially sustainable and compliant.',
 			color: 'tertiary',
 		},
 	];

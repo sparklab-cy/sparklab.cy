@@ -76,7 +76,9 @@
         updateCSSVariables();
     });
 </script>
-
+<svelte:head>
+    <title>ByteBlocks</title>
+</svelte:head>
 <MeshBackground />
 
 <main>
@@ -157,6 +159,33 @@
     
     :global(*) {
         box-sizing: border-box;
+    }
+
+    :global(a) {
+		color: var(--color-text);
+        text-decoration: none;
+        background-image: linear-gradient(currentColor, currentColor);
+        background-position: 0% 100%;
+        background-repeat: no-repeat;
+        background-size: 0% 0.85px;
+        transition: background-size 0.3s cubic-bezier(.24,.77,.24,.78);
+    }
+
+    :global(a:hover) {
+        background-size: 100% 0.85px;
+    }
+
+    :global(a.no-underline),
+    :global(nav a),
+    :global(button a),
+    :global(a[class*="btn"]),
+    :global(a[class*="cta"]),
+    :global(a[class*="link"]),
+    :global(a.course-card),
+    :global(a.brand-link),
+    :global(a.button),
+    :global(a.continue-shopping) {
+        background-image: none;
     }
     
     main {

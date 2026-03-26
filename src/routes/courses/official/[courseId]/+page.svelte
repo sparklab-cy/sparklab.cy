@@ -120,7 +120,7 @@
     grid-template-columns: 300px 1fr;
     gap: 2rem;
     margin-bottom: 3rem;
-    background: var(--surface);
+    background: var(--secondary-background);
     border-radius: 12px;
     overflow: hidden;
     border: 1px solid var(--border);
@@ -163,7 +163,7 @@
   }
   
   .level-badge {
-    background: var(--primary-color);
+    background: var(--color-primary);
     color: white;
   }
   
@@ -172,7 +172,7 @@
   }
   
   .course-info h1 {
-    color: var(--text);
+    color: var(--color-text);
     margin-bottom: 1rem;
     font-size: 2rem;
   }
@@ -210,7 +210,7 @@
   }
   
   .progress-text {
-    color: var(--text);
+    color: var(--color-text);
     font-weight: 500;
   }
   
@@ -227,7 +227,7 @@
   }
   
   .progress-fill {
-    background: var(--primary-color);
+    background: var(--color-primary);
     height: 100%;
     border-radius: 20px;
     transition: width 0.3s;
@@ -245,7 +245,7 @@
   }
   
   .lessons-header h2 {
-    color: var(--text);
+    color: var(--color-text);
     margin: 0;
   }
   
@@ -274,7 +274,7 @@
     border-radius: 12px;
     padding: 1.5rem;
     transition: all 0.3s;
-    background: var(--surface);
+    background: var(--secondary-background);
   }
   
   .lesson-card:hover {
@@ -290,7 +290,7 @@
   }
   
   .lesson-number {
-    background: var(--primary-color);
+    background: var(--color-primary);
     color: white;
     width: 32px;
     height: 32px;
@@ -308,7 +308,7 @@
   }
   
   .status-icon.completed {
-    color: var(--primary-color);
+    color: var(--color-primary);
   }
   
   .status-icon.in-progress {
@@ -321,7 +321,7 @@
   
   .lesson-content h3 {
     margin: 0 0 0.5rem 0;
-    color: var(--text);
+    color: var(--color-text);
     font-size: 1.1rem;
   }
   
@@ -334,7 +334,7 @@
     display: inline-block;
     width: 100%;
     padding: 0.75rem 1rem;
-    background: var(--primary-color);
+    background: var(--color-primary);
     color: white;
     text-decoration: none;
     border-radius: 8px;
@@ -345,7 +345,7 @@
   }
   
   .lesson-btn:hover {
-    background: var(--primary-dark);
+    background: var(--color-accent);
   }
   
   .error {

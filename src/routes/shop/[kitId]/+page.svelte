@@ -206,7 +206,7 @@
   .main-image {
     border-radius: 12px;
     overflow: hidden;
-    background: var(--surface);
+    background: var(--secondary-background);
     border: 1px solid var(--border);
   }
   
@@ -232,11 +232,11 @@
   }
   
   .image-thumbnails img:hover {
-    border-color: var(--primary-color);
+    border-color: var(--color-primary);
   }
   
   .image-thumbnails img.selected {
-    border-color: var(--primary-color);
+    border-color: var(--color-primary);
   }
   
   .product-info {
@@ -246,7 +246,7 @@
   }
   
   .product-header h1 {
-    color: var(--text);
+    color: var(--color-text);
     margin: 0 0 1rem 0;
     font-size: 2rem;
   }
@@ -264,13 +264,13 @@
   }
   
   .level-badge {
-    background: var(--primary-color);
+    background: var(--color-primary);
     color: white;
   }
   
   .theme-badge {
     background: var(--accent);
-    color: var(--text);
+    color: var(--color-text);
   }
   
   .price-section {
@@ -282,7 +282,7 @@
   .price {
     font-size: 2rem;
     font-weight: bold;
-    color: var(--primary-color);
+    color: var(--color-primary);
   }
   
   .premium-price {
@@ -291,7 +291,7 @@
   }
   
   .description h3, .features h3, .specifications h3 {
-    color: var(--text);
+    color: var(--color-text);
     margin: 0 0 0.5rem 0;
   }
   
@@ -317,7 +317,7 @@
     content: "-";
     position: absolute;
     left: 0;
-    color: var(--primary-color);
+    color: var(--color-primary);
     font-weight: bold;
   }
   
@@ -335,7 +335,7 @@
   
   .spec-label {
     font-weight: 500;
-    color: var(--text);
+    color: var(--color-text);
   }
   
   .spec-value {
@@ -365,8 +365,8 @@
   .quantity-controls button {
     padding: 0.5rem 1rem;
     border: none;
-    background: var(--surface);
-    color: var(--text);
+    background: var(--secondary-background);
+    color: var(--color-text);
     cursor: pointer;
     transition: background 0.2s;
   }
@@ -380,14 +380,14 @@
     text-align: center;
     border: none;
     padding: 0.5rem;
-    background: var(--surface);
-    color: var(--text);
+    background: var(--secondary-background);
+    color: var(--color-text);
   }
   
   .purchase-btn {
     width: 100%;
     padding: 1rem;
-    background: var(--primary-color);
+    background: var(--color-primary);
     color: white;
     border: none;
     border-radius: 8px;
@@ -398,7 +398,7 @@
   }
   
   .purchase-btn:hover {
-    background: var(--primary-dark);
+    background: var(--color-accent);
   }
   
   .owned-message {
@@ -409,7 +409,7 @@
   }
   
   .owned-message h3 {
-    color: var(--primary-color);
+    color: var(--color-primary);
     margin: 0 0 0.5rem 0;
   }
   
@@ -421,7 +421,7 @@
   .access-btn {
     display: inline-block;
     padding: 0.75rem 1.5rem;
-    background: var(--primary-color);
+    background: var(--color-primary);
     color: white;
     text-decoration: none;
     border-radius: 8px;
@@ -430,7 +430,7 @@
   }
   
   .access-btn:hover {
-    background: var(--primary-dark);
+    background: var(--color-accent);
   }
   
   .courses-section {
@@ -439,7 +439,7 @@
   }
   
   .courses-section h2 {
-    color: var(--text);
+    color: var(--color-text);
     margin: 0 0 2rem 0;
   }
   
@@ -448,7 +448,7 @@
   }
   
   .courses-subsection h3 {
-    color: var(--text);
+    color: var(--color-text);
     margin: 0 0 1rem 0;
   }
   
@@ -462,11 +462,11 @@
     padding: 1rem;
     border: 1px solid var(--border);
     border-radius: 8px;
-    background: var(--surface);
+    background: var(--secondary-background);
   }
   
   .course-card h4 {
-    color: var(--text);
+    color: var(--color-text);
     margin: 0 0 0.5rem 0;
   }
   
@@ -491,14 +491,14 @@
   }
   
   .price {
-    color: var(--primary-color);
+    color: var(--color-primary);
     font-weight: 500;
   }
   
   .course-btn {
     display: inline-block;
     padding: 0.5rem 1rem;
-    background: var(--primary-color);
+    background: var(--color-primary);
     color: white;
     text-decoration: none;
     border-radius: 4px;
@@ -507,7 +507,7 @@
   }
   
   .course-btn:hover {
-    background: var(--primary-dark);
+    background: var(--color-accent);
   }
   
   .requires-kit {

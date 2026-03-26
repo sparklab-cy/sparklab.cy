@@ -2,22 +2,23 @@
 	const year = new Date().getFullYear();
 
 	const tickerItems = [
-		'Lorem ipsum dolor sit amet',
-		'Consectetur adipiscing elit',
-		'Sed do eiusmod tempor incididunt',
-		'Ut labore et dolore magna aliqua',
-		'Quis nostrud exercitation ullamco',
-		'Duis aute irure dolor in reprehenderit',
-		'Excepteur sint occaecat cupidatat',
-		'Sunt in culpa qui officia deserunt',
+		'Modular kits for every skill level',
+		'Block-based programming with ByteBlocks Studio',
+		'Built for classrooms and solo learners',
+		'Real hardware, real projects',
+		'IoT dashboard included with every kit',
+		'5 difficulty levels following the STEM Ambassador path',
+		'Virtual circuit simulator — test before you build',
+		'New kits dropping soon',
 	];
 
 	const bentoCards = [
-		{ title: 'Modular Hardware', body: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus lacinia odio vitae vestibulum vestibulum.', span: 'wide', color: 'primary', icon: 'circuit' },
-		{ title: '5 Difficulty Levels', body: 'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.', span: 'normal', color: 'secondary', icon: 'levels' },
-		{ title: 'Interactive Lessons', body: 'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla.', span: 'normal', color: 'tertiary', icon: 'lesson' },
-		{ title: 'Classroom Ready', body: 'Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim.', span: 'normal', color: 'primary', icon: 'classroom' },
-		{ title: 'Community Courses', body: 'Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam.', span: 'wide', color: 'accent', icon: 'community' },
+		{ title: 'Modular Hardware', body: 'Connect components to make kits. Combine components from different kits to create your own projects.', span: 'wide', color: 'primary', icon: 'circuit' },
+		{ title: '5 Difficulty Levels', body: 'Following the rigorous learning path of the <a href="https://www.stemfreak.com/stem-2/">Stem Ambassador program</a>.', span: 'normal', color: 'secondary', icon: 'levels' },
+		{ title: 'Interactive Lessons', body: 'Beyond just listening. Build, code, test, understand and interact with each kit.', span: 'normal', color: 'tertiary', icon: 'lesson' },
+		{ title: 'Classroom Ready', body: 'Can be used in a classroom setting with teacher dashboard and progress tracking.', span: 'normal', color: 'primary', icon: 'classroom' },
+		{ title: 'Strong Community', body: 'Community courses and lessons from other users to learn from and contribute to. An online form to share your projects and get feedback.', span: 'long', color: 'tertiary', icon: 'community' },
+		{ title: 'Integrated Tools', body: 'Code with blocks. Use our online Simulator to test your code. Connect projects to our IoT platform.', span: 'wide', color: 'accent', icon: 'tools' },
 	];
 
 	function handleBlobMove(event: MouseEvent) {
@@ -146,6 +147,12 @@
 								<circle cx="10" cy="18" r="4" stroke="currentColor" stroke-width="2" opacity="0.5"/>
 								<circle cx="38" cy="18" r="4" stroke="currentColor" stroke-width="2" opacity="0.5"/>
 							</svg>
+					{:else if card.icon === 'tools'}
+						<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<path d="M36.5 8a8.5 8.5 0 00-8.2 10.6L14.8 32.1a5 5 0 107.1 7.1L35.4 25.7A8.5 8.5 0 0036.5 8z" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/>
+							<circle cx="36.5" cy="16.5" r="4" stroke="currentColor" stroke-width="2" opacity="0.5"/>
+							<path d="M18 35l-3 3" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+						</svg>
 						{:else}
 							<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
 								<path d="M24 6L42 18V38L24 42L6 38V18L24 6Z" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/>
@@ -157,7 +164,7 @@
 						{/if}
 					</div>
 					<h3>{card.title}</h3>
-					<p>{card.body}</p>
+					<p>{@html card.body}</p>
 				</div>
 			</div>
 		{/each}
@@ -333,6 +340,10 @@
 
 	.bento-card.wide {
 		grid-column: span 2;
+	}
+
+	.bento-card.long {
+		grid-row: span 2;
 	}
 
 	/* Blob follower */

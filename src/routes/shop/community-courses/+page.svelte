@@ -197,7 +197,7 @@
   }
   
   .page-header h1 {
-    color: var(--primary-color);
+    color: var(--color-primary);
     margin-bottom: 1rem;
     font-size: 2.5rem;
   }
@@ -210,7 +210,7 @@
   }
   
   .search-filters {
-    background: var(--surface);
+    background: var(--secondary-background);
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 1.5rem;
@@ -226,13 +226,13 @@
     padding: 0.75rem 1rem;
     border: 1px solid var(--border);
     border-radius: 8px;
-    background: var(--background);
-    color: var(--text);
+    background: var(--color-background);
+    color: var(--color-text);
     font-size: 1rem;
   }
   
   .search-bar input:focus {
-    outline: 2px solid var(--primary-color);
+    outline: 2px solid var(--color-primary);
     outline-offset: 2px;
   }
   
@@ -247,8 +247,8 @@
     padding: 0.5rem 0.75rem;
     border: 1px solid var(--border);
     border-radius: 6px;
-    background: var(--background);
-    color: var(--text);
+    background: var(--color-background);
+    color: var(--color-text);
     font-size: 0.9rem;
   }
   
@@ -257,7 +257,7 @@
     background: var(--secondary-background);
     border: 1px solid var(--border);
     border-radius: 6px;
-    color: var(--text);
+    color: var(--color-text);
     cursor: pointer;
     font-size: 0.9rem;
     transition: background 0.2s;
@@ -283,7 +283,7 @@
     border-radius: 12px;
     overflow: hidden;
     transition: all 0.3s;
-    background: var(--surface);
+    background: var(--secondary-background);
   }
   
   .course-card:hover {
@@ -333,7 +333,7 @@
   }
   
   .level-badge {
-    background: var(--primary-color);
+    background: var(--color-primary);
     color: white;
   }
   
@@ -346,7 +346,7 @@
   }
   
   .course-header h3 {
-    color: var(--text);
+    color: var(--color-text);
     margin: 0 0 0.5rem 0;
     font-size: 1.2rem;
   }
@@ -365,7 +365,7 @@
   }
   
   .price {
-    color: var(--primary-color);
+    color: var(--color-primary);
     font-weight: 500;
   }
   
@@ -385,7 +385,7 @@
   .access-btn {
     display: block;
     padding: 0.75rem 1rem;
-    background: var(--primary-color);
+    background: var(--color-primary);
     color: white;
     text-decoration: none;
     text-align: center;
@@ -395,7 +395,7 @@
   }
   
   .access-btn:hover {
-    background: var(--primary-dark);
+    background: var(--color-accent);
   }
   
   .kit-required {
@@ -413,7 +413,7 @@
   
   .purchase-btn {
     padding: 0.5rem 1rem;
-    background: var(--primary-color);
+    background: var(--color-primary);
     color: white;
     border: none;
     border-radius: 6px;
@@ -423,19 +423,19 @@
   }
   
   .purchase-btn:hover {
-    background: var(--primary-dark);
+    background: var(--color-accent);
   }
   
   .no-results {
     text-align: center;
     padding: 3rem;
-    background: var(--surface);
+    background: var(--secondary-background);
     border: 1px solid var(--border);
     border-radius: 12px;
   }
   
   .no-results h3 {
-    color: var(--text);
+    color: var(--color-text);
     margin-bottom: 1rem;
   }
   
@@ -454,7 +454,7 @@
   }
   
   .success {
-    background: var(--primary-color);
+    background: var(--color-primary);
     color: white;
     padding: 1rem;
     border-radius: 8px;

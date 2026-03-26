@@ -210,12 +210,12 @@
   }
   
   .checkout-header h1 {
-    color: var(--text);
+    color: var(--color-text);
     margin: 0;
   }
   
   .continue-shopping {
-    color: var(--primary-color);
+    color: var(--color-primary);
     text-decoration: none;
     font-weight: 500;
   }
@@ -230,7 +230,7 @@
   }
   
   .empty-cart h2 {
-    color: var(--text);
+    color: var(--color-text);
     margin-bottom: 1rem;
   }
   
@@ -242,7 +242,7 @@
   .shop-btn {
     display: inline-block;
     padding: 1rem 2rem;
-    background: var(--primary-color);
+    background: var(--color-primary);
     color: white;
     text-decoration: none;
     border-radius: 8px;
@@ -256,7 +256,7 @@
   }
   
   .order-summary {
-    background: var(--surface);
+    background: var(--secondary-background);
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 2rem;
@@ -264,7 +264,7 @@
   }
   
   .order-summary h2 {
-    color: var(--text);
+    color: var(--color-text);
     margin-bottom: 1.5rem;
   }
   
@@ -304,7 +304,7 @@
   .item-details h3 {
     margin: 0 0 0.25rem 0;
     font-size: 1rem;
-    color: var(--text);
+    color: var(--color-text);
   }
   
   .item-type {
@@ -322,7 +322,7 @@
   
   .item-total {
     font-weight: 600;
-    color: var(--text);
+    color: var(--color-text);
     align-self: center;
   }
   
@@ -335,27 +335,27 @@
     display: flex;
     justify-content: space-between;
     margin-bottom: 0.5rem;
-    color: var(--text);
+    color: var(--color-text);
   }
   
   .grand-total {
     font-size: 1.2rem;
     font-weight: 600;
-    color: var(--primary-color);
+    color: var(--color-primary);
     border-top: 1px solid var(--border);
     padding-top: 0.5rem;
     margin-top: 0.5rem;
   }
   
   .payment-form {
-    background: var(--surface);
+    background: var(--secondary-background);
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 2rem;
   }
   
   .payment-form h2 {
-    color: var(--text);
+    color: var(--color-text);
     margin-bottom: 1.5rem;
   }
   
@@ -364,7 +364,7 @@
   }
   
   .form-section h3 {
-    color: var(--text);
+    color: var(--color-text);
     margin-bottom: 1rem;
     font-size: 1.1rem;
   }
@@ -382,7 +382,7 @@
   .form-group label {
     display: block;
     margin-bottom: 0.5rem;
-    color: var(--text);
+    color: var(--color-text);
     font-weight: 500;
   }
   
@@ -391,13 +391,13 @@
     padding: 0.75rem;
     border: 1px solid var(--border);
     border-radius: 8px;
-    background: var(--background);
-    color: var(--text);
+    background: var(--color-background);
+    color: var(--color-text);
     font-size: 1rem;
   }
   
   .form-group input:focus {
-    outline: 2px solid var(--primary-color);
+    outline: 2px solid var(--color-primary);
     outline-offset: 2px;
   }
   
@@ -414,7 +414,7 @@
   }
   
   .method-label {
-    color: var(--text);
+    color: var(--color-text);
   }
   
   .form-actions {
@@ -424,7 +424,7 @@
   .pay-btn {
     width: 100%;
     padding: 1rem;
-    background: var(--primary-color);
+    background: var(--color-primary);
     color: white;
     border: none;
     border-radius: 8px;
@@ -435,7 +435,7 @@
   }
   
   .pay-btn:hover:not(:disabled) {
-    background: var(--primary-dark);
+    background: var(--color-accent);
   }
   
   .pay-btn:disabled {

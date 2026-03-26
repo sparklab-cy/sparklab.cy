@@ -1,27 +1,47 @@
 <script lang="ts">
+	type KitComponent = {
+		name: string;
+	};
+
 	type KitCard = {
 		title: string;
 		description: string;
 		image?: string;
 		tags: string[];
 		status?: 'current' | 'coming';
+		components?: string[];
+		extras?: string[];
 	};
 
-	// TODO: Replace these with your real kit names/images/descriptions.
 	const currentKits: KitCard[] = [
 		{
-			title: 'Starter Circuits Kit',
-			description: 'A beginner-friendly kit to learn the basics: power, LEDs, buttons, and simple sensors.',
+			title: 'Color Mixer',
+			description: 'Mix any color with 3 knobs controlling an RGB LED. Each potentiometer adjusts the intensity of one color channel (red, green, blue) so you can dial in any shade.',
 			image: undefined,
-			tags: ['Level 1', 'Basics', 'Hands-on'],
+			tags: ['Level 1', 'RGB', 'No Code'],
 			status: 'current',
+			components: [
+				'RGB LED',
+				'3x Potentiometer',
+				'3x Resistor',
+				'3x AA Battery Holder',
+			],
+			extras: ['Extra resistors to experiment with'],
 		},
 		{
-			title: 'Motion and Light Kit',
-			description: 'Build interactive projects using motion detection and light control with modular components.',
+			title: 'Smart Nightlight',
+			description: 'A motion-activated nightlight powered by Arduino. A PIR sensor detects movement and switches on a 3W LED, all housed in a 3D-printed case.',
 			image: undefined,
-			tags: ['Level 2', 'Sensors', 'Creative builds'],
+			tags: ['Level 2', 'Arduino', 'Motion Sensor'],
 			status: 'current',
+			components: [
+				'3W LED',
+				'PIR Motion Sensor',
+				'Arduino R3',
+				'3D Printed Casing',
+				'Jumper Cables',
+			],
+			extras: ['No custom PCB — wired with jumper cables'],
 		},
 	];
 
@@ -78,7 +98,7 @@
 			<p>Available now. Each kit includes guided builds and interactive learning.</p>
 		</div>
 
-		<div class="kits-grid">
+		<div class="kits-grid kits-grid-current">
 			{#each currentKits as kit, i}
 				<article class="kit-card animate-in delay-{i + 1}">
 					{#if kit.image}
@@ -94,6 +114,27 @@
 								<span class="tag">{tag}</span>
 							{/each}
 						</div>
+
+						{#if kit.components && kit.components.length > 0}
+							<div class="components">
+								<h4>What's in the box</h4>
+								<ul>
+									{#each kit.components as comp}
+										<li>
+											<span class="comp-name">{comp}</span>
+										</li>
+									{/each}
+								</ul>
+							</div>
+						{/if}
+
+						{#if kit.extras && kit.extras.length > 0}
+							<div class="extras">
+								{#each kit.extras as extra}
+									<span class="extra">{extra}</span>
+								{/each}
+							</div>
+						{/if}
 					</div>
 				</article>
 			{/each}
@@ -192,6 +233,10 @@
 		gap: 1rem;
 	}
 
+	.kits-grid-current {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
 	.kit-card {
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
@@ -269,6 +314,62 @@
 		font-size: 0.78rem;
 		font-weight: 700;
 		opacity: 0.92;
+	}
+
+	.components {
+		margin-top: 1.1rem;
+		padding-top: 1rem;
+		border-top: 1px solid rgba(128, 128, 128, 0.12);
+	}
+
+	.components h4 {
+		margin: 0 0 0.55rem;
+		font-size: 0.82rem;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--muted);
+		font-weight: 800;
+	}
+
+	.components ul {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+	}
+
+	.components li {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		font-size: 0.88rem;
+		color: var(--color-text);
+	}
+
+	.comp-name {
+		font-weight: 600;
+	}
+
+	.comp-price {
+		font-weight: 800;
+		color: var(--color-primary);
+		font-size: 0.85rem;
+	}
+
+	.extras {
+		margin-top: 0.85rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+	}
+
+	.extra {
+		font-size: 0.82rem;
+		color: var(--muted);
+		line-height: 1.5;
+		font-weight: 600;
 	}
 
 	@media (max-width: 980px) {

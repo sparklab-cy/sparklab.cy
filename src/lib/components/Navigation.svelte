@@ -9,7 +9,7 @@
   	<div class="nav-container">
 		<div class="nav-brand">
 			<a href="/" class="brand-link">
-				<img src="/logo.png" alt="" class="brand-logo" />
+				<img src="/logo_no_bg_colored.png" alt="" class="brand-logo" />
 				<span class="brand-text">ByteBlocks</span>
 			</a>
 		</div>
