@@ -1,12 +1,16 @@
 import type { PageServerLoad } from './$types';
 import type { Actions } from './$types';
+import { redirect } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
   const { courseId, lessonId } = params;
   const { user, supabase } = locals;
 
+  if (!user) {
+    throw redirect(302, '/login?redirect=/courses/community/' + courseId + '/lessons/' + lessonId);
+  }
+
   try {
-    // Load course
     const { data: courseData, error: courseError } = await supabase
       .from('custom_courses')
       .select('*')
@@ -21,6 +25,25 @@ export const load: PageServerLoad = async ({ params, locals }) => {
         userProgress: [],
         lessonContent: null,
         error: 'Course not found'
+      };
+    }
+
+    const { data: permission } = await supabase
+      .from('user_permissions')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('kit_id', courseData.kit_id)
+      .eq('permission_type', 'course_access')
+      .single();
+
+    if (!permission) {
+      return {
+        lesson: null,
+        course: courseData,
+        lessons: null,
+        userProgress: [],
+        lessonContent: null,
+        error: 'You do not have access to this course. Purchase the kit first.'
       };
     }
 

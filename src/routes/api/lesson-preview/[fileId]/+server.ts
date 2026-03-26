@@ -5,8 +5,15 @@ import type { RequestHandler } from './$types';
 const SVELTE_CDN = 'https://esm.sh/svelte@5';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
-	const { supabase } = locals;
+	const { supabase, user } = locals;
 	const { fileId } = params;
+
+	if (!user) {
+		return new Response('<p>Unauthorized</p>', {
+			status: 401,
+			headers: { 'Content-Type': 'text/html' }
+		});
+	}
 
 	const { data: lessonFile, error } = await supabase
 		.from('lesson_files')

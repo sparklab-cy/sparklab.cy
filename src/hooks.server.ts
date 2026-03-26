@@ -62,17 +62,18 @@ const supabase: Handle = async ({ event, resolve }) => {
 	})
 }
 
+const protectedPrefixes = ['/admin', '/profile', '/create-course', '/checkout', '/redeem', '/courses']
+
 const authGuard: Handle = async ({ event, resolve }) => {
 	const { session, user } = await event.locals.safeGetSession()
 	event.locals.session = session
 	event.locals.user = user
 
-	if (!event.locals.session && event.url.pathname.startsWith('/private')) {
-		redirect(303, '/auth')
-	}
+	const path = event.url.pathname
+	const needsAuth = protectedPrefixes.some((p) => path === p || path.startsWith(p + '/'))
 
-	if (event.locals.session && event.url.pathname === '/auth') {
-		redirect(303, '/private')
+	if (needsAuth && !session) {
+		redirect(303, '/login?redirect=' + encodeURIComponent(path))
 	}
 
 	return resolve(event)

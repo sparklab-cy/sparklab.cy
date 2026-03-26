@@ -2,7 +2,7 @@
 import { fail, redirect, type Actions } from '@sveltejs/kit';
 
 export const actions: Actions = {
-	default: async ({ request, cookies, locals }) => {
+	default: async ({ request, locals }) => {
 		const { supabase } = locals;
 
 		const form = await request.formData();
@@ -15,18 +15,6 @@ export const actions: Actions = {
 			return fail(401, { error: error.message, email });
 		}
 
-		const session = data.session;
-		if (session) {
-			cookies.set('sb-access-token', session.access_token, {
-				path: '/',
-				httpOnly: true,
-				sameSite: 'strict',
-				secure: true,
-				maxAge: 60 * 60 * 24 * 7
-			});
-		}
-
-		// Redirect after successful login
 		throw redirect(303, '/');
 	}
 };

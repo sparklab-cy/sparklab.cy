@@ -5,15 +5,14 @@ export const GET: RequestHandler = async ({ url, cookies, locals }) => {
 	const code = url.searchParams.get('code');
 	const next = url.searchParams.get('next') ?? '/';
 
+	const safeNext = (next.startsWith('/') && !next.startsWith('//')) ? next : '/';
+
 	const { supabase } = locals;
 
 	if (!code) {
 		throw redirect(303, '/login');
 	}
 
-	// ⬇️ This is the missing step — exchange the code for a session
-	// The Supabase SSR client automatically handles cookie management,
-	// so we don't need to manually set cookies here
 	const { error } = await supabase.auth.exchangeCodeForSession(code);
 
 	if (error) {
@@ -21,5 +20,5 @@ export const GET: RequestHandler = async ({ url, cookies, locals }) => {
 		throw redirect(303, '/login?error=auth_failed');
 	}
 
-	throw redirect(303, next); // redirect to homepage or originally intended page
+	throw redirect(303, safeNext);
 };
