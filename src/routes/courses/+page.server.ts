@@ -62,9 +62,42 @@ export const load: PageServerLoad = async ({ url, locals, parent }) => {
       userCourses = data ?? [];
     }
 
+    let invitedCommunityCourses: any[] = [];
+    if (user) {
+      const { data: grantRows, error: grantErr } = await supabase
+        .from('course_access_grants')
+        .select(
+          `
+          course_id,
+          custom_courses (
+            id,
+            title,
+            description,
+            kit_id,
+            is_published,
+            creator_id,
+            kits:kit_id ( name, theme, level )
+          )
+        `
+        )
+        .eq('user_id', user.id);
+
+      if (!grantErr && grantRows?.length) {
+        const seen = new Set<string>();
+        for (const r of grantRows as { custom_courses: any }[]) {
+          const c = r.custom_courses;
+          if (!c?.id || seen.has(c.id)) continue;
+          if (c.creator_id === user.id) continue;
+          seen.add(c.id);
+          invitedCommunityCourses.push(c);
+        }
+      }
+    }
+
     return {
       kits: kits || [],
       officialCourses: officialCourses || [],
+      invitedCommunityCourses,
       userCourses,
       selectedKit,
       userKits,
@@ -78,6 +111,7 @@ export const load: PageServerLoad = async ({ url, locals, parent }) => {
     return {
       kits: [],
       officialCourses: [],
+      invitedCommunityCourses: [],
       userCourses: [],
       selectedKit,
       userKits: [],

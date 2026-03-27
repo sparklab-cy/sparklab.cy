@@ -1,12 +1,41 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+  import { page } from '$app/state';
   import { cart, type CartItem } from '$lib/stores/cart';
   
   let cartState = $state<{ items: CartItem[]; isOpen: boolean }>({ items: [], isOpen: false });
-  let itemCount = $state(0);
-  
-  cart.subscribe(state => {
+  let shopifyCount = $state(0);
+
+  const shopifyEnabled = $derived(Boolean(page.data.shopifyEnabled));
+
+  cart.subscribe((state) => {
     cartState = state;
-    itemCount = state.items.reduce((sum, item) => sum + item.quantity, 0);
+  });
+
+  const itemCount = $derived(
+    shopifyEnabled
+      ? shopifyCount
+      : cartState.items.reduce((sum, item) => sum + item.quantity, 0)
+  );
+
+  async function refreshShopifyCount() {
+    const r = await fetch('/api/shop/cart');
+    const d = await r.json();
+    shopifyCount = d.totalQuantity ?? 0;
+  }
+
+  $effect(() => {
+    if (shopifyEnabled) {
+      refreshShopifyCount();
+    }
+  });
+
+  onMount(() => {
+    const onUpdate = () => {
+      if (shopifyEnabled) refreshShopifyCount();
+    };
+    window.addEventListener('shopify-cart-updated', onUpdate);
+    return () => window.removeEventListener('shopify-cart-updated', onUpdate);
   });
   
   function openCart() {

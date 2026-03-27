@@ -1,9 +1,15 @@
 import type { PageServerLoad, Actions } from './$types';
 import { error } from '@sveltejs/kit';
+import {
+	isShopifyConfigured,
+	fetchShopifyVariantMapForKits,
+	type ShopifyVariantInfo
+} from '$lib/server/shopifyStorefront';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
   const { kitId } = params;
   const { user, supabase } = locals;
+  const shopifyEnabled = isShopifyConfigured();
 
   try {
     // Load the specific kit
@@ -16,6 +22,22 @@ export const load: PageServerLoad = async ({ params, locals }) => {
     if (kitError || !kit) {
       throw error(404, 'Kit not found');
     }
+
+    let variantMap = new Map<string, ShopifyVariantInfo>();
+    if (shopifyEnabled) {
+      try {
+        variantMap = await fetchShopifyVariantMapForKits([kitId]);
+      } catch (e) {
+        console.error('Shopify variant map:', e);
+      }
+    }
+    const v = variantMap.get(kitId);
+    const kitMerged = {
+      ...kit,
+      shopifyVariantGid: v?.variantGid ?? null,
+      displayPrice: v ? v.priceAmount : Number(kit.price),
+      currencyCode: v?.currencyCode ?? 'USD'
+    };
 
     // Load official courses for this kit
     const { data: officialCourses, error: coursesError } = await supabase
@@ -53,7 +75,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
     }
 
     return {
-      kit,
+      kit: kitMerged,
+      shopifyEnabled,
       officialCourses: officialCourses || [],
       communityCourses: communityCourses || [],
       hasAccess,
@@ -81,6 +104,16 @@ export const actions: Actions = {
       
       if (!kitId) {
         return { success: false, error: 'Kit ID is required' };
+      }
+
+      if (isShopifyConfigured()) {
+        const map = await fetchShopifyVariantMapForKits([kitId]);
+        if (map.has(kitId)) {
+          return {
+            success: false,
+            error: 'Use the shop cart and Shopify checkout for this kit.'
+          };
+        }
       }
 
       // Get kit details for pricing

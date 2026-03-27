@@ -1,5 +1,8 @@
 import type { PageServerLoad, Actions } from './$types';
-import { redirect } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
+import { fetchCatalogProducts, isShopifyConfigured } from '$lib/server/shopifyStorefront';
+import { syncKitsFromCatalogProducts } from '$lib/server/shopifyKitsSync';
+import { isSupabaseAdminConfigured } from '$lib/server/supabaseAdmin';
 
 export const load: PageServerLoad = async ({ locals }) => {
   const { user, supabase } = locals;
@@ -252,6 +255,46 @@ export const actions: Actions = {
     } catch (error) {
       console.error('Failed to grant kit access:', error);
       return { success: false, error: 'Failed to grant kit access' };
+    }
+  },
+
+  syncShopifyKits: async ({ locals }) => {
+    const { user, supabase } = locals;
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user?.id)
+      .single();
+
+    if (!user || profile?.role !== 'admin') {
+      return fail(403, { error: 'Unauthorized' });
+    }
+
+    if (!isShopifyConfigured()) {
+      return fail(400, {
+        error:
+          'Shopify is not configured. Set PUBLIC_SHOPIFY_STORE_DOMAIN and PUBLIC_SHOPIFY_STOREFRONT_TOKEN.'
+      });
+    }
+
+    if (!isSupabaseAdminConfigured()) {
+      return fail(400, {
+        error:
+          'Supabase service role is missing. Set PRIVATE_SUPABASE_SERVICE_ROLE_KEY in the server environment so kits can be updated.'
+      });
+    }
+
+    try {
+      const products = await fetchCatalogProducts();
+      await syncKitsFromCatalogProducts(products);
+      return {
+        message: `Synced ${products.length} product(s) from Shopify into the kits table.`
+      };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error('syncShopifyKits:', e);
+      return fail(500, { error: msg || 'Sync failed' });
     }
   }
 };

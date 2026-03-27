@@ -1,4 +1,5 @@
 import type { LayoutServerLoad } from './$types';
+import { isShopifyConfigured } from '$lib/server/shopifyStorefront';
 
 export const load: LayoutServerLoad = async ({ params, locals }) => {
     const { user } = await locals.safeGetSession();
@@ -24,5 +25,6 @@ export const load: LayoutServerLoad = async ({ params, locals }) => {
         user,
         profile,
         isAdmin,
+		shopifyEnabled: isShopifyConfigured(),
     }
 };

@@ -38,8 +38,10 @@ CREATE TABLE IF NOT EXISTS kits (
   images JSONB DEFAULT '[]'::jsonb,
   features JSONB DEFAULT '[]'::jsonb,
   specifications JSONB DEFAULT '{}'::jsonb,
+  shopify_handle TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT kits_shopify_handle_unique UNIQUE (shopify_handle)
 );
 
 -- ============================================================================

@@ -4,7 +4,16 @@
   import type { Kit, OfficialCourse, CustomCourse } from '$lib/types/courses';
 
   const { data, form } = $props();
-  const { kits, officialCourses, userCourses, userKits, userRole, canCreateCourses, error } = data;
+  const {
+    kits,
+    officialCourses,
+    invitedCommunityCourses,
+    userCourses,
+    userKits,
+    userRole,
+    canCreateCourses,
+    error
+  } = data;
 
   const userKitIds: string[] = userKits || [];
   const isAdmin = userRole === 'admin';
@@ -21,37 +30,66 @@
 
   {#if error}
     <div class="error-banner">{error}</div>
-  {:else if userKitIds.length === 0}
+  {:else if userKitIds.length === 0 && (!invitedCommunityCourses || invitedCommunityCourses.length === 0)}
     <section class="empty-state">
       <h2>No kits yet</h2>
       <p>Purchase a kit to unlock your first courses and start building.</p>
       <a href="/shop" class="cta-btn">Go to Shop</a>
     </section>
   {:else}
-    {#if officialCourses.length === 0}
-      <section class="empty-state">
-        <h2>No courses available</h2>
-        <p>There are no published courses for your kits yet. Check back soon.</p>
+    {#if invitedCommunityCourses && invitedCommunityCourses.length > 0}
+      <section class="invited-section">
+        <h2 class="section-title">Shared with you</h2>
+        <p class="section-sub">Community courses you were invited to or joined via link.</p>
+        <div class="courses-grid">
+          {#each invitedCommunityCourses as course, idx}
+            <a
+              href="/courses/community/{course.id}"
+              class="course-card animate-in delay-{(idx % 5) + 1}"
+            >
+              <div class="card-top">
+                {#if course.kits}
+                  <span class="theme-badge">{Array.isArray(course.kits) ? course.kits[0]?.name : course.kits.name}</span>
+                {/if}
+                <span class="cc-badge invite-only">Community</span>
+              </div>
+              <h2>{course.title}</h2>
+              <p class="course-desc">{course.description}</p>
+              <div class="card-footer">
+                <span class="start-label">Open course</span>
+              </div>
+            </a>
+          {/each}
+        </div>
       </section>
-    {:else}
-      <section class="courses-grid">
-        {#each officialCourses as course, idx}
-          <a href="/courses/official/{course.id}" class="course-card animate-in delay-{(idx % 5) + 1}">
-            <div class="card-top">
-              <span class="level-badge">Level {course.level}</span>
-              <span class="theme-badge">{course.theme}</span>
-            </div>
-            <h2>{course.title}</h2>
-            <p class="course-desc">{course.description}</p>
-            <div class="card-footer">
-              {#if course.estimated_duration}
-                <span class="duration">{course.estimated_duration} min</span>
-              {/if}
-              <span class="start-label">Start Course</span>
-            </div>
-          </a>
-        {/each}
-      </section>
+    {/if}
+
+    {#if userKitIds.length > 0}
+      {#if officialCourses.length === 0}
+        <section class="empty-state">
+          <h2>No courses available</h2>
+          <p>There are no published courses for your kits yet. Check back soon.</p>
+        </section>
+      {:else}
+        <section class="courses-grid">
+          {#each officialCourses as course, idx}
+            <a href="/courses/official/{course.id}" class="course-card animate-in delay-{(idx % 5) + 1}">
+              <div class="card-top">
+                <span class="level-badge">Level {course.level}</span>
+                <span class="theme-badge">{course.theme}</span>
+              </div>
+              <h2>{course.title}</h2>
+              <p class="course-desc">{course.description}</p>
+              <div class="card-footer">
+                {#if course.estimated_duration}
+                  <span class="duration">{course.estimated_duration} min</span>
+                {/if}
+                <span class="start-label">Start Course</span>
+              </div>
+            </a>
+          {/each}
+        </section>
+      {/if}
     {/if}
 
     {#if canCreateCourses}
@@ -199,6 +237,22 @@
   .cta-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 12px 32px rgba(116, 118, 252, 0.25);
+  }
+
+  .invited-section {
+    margin-bottom: 2.5rem;
+  }
+
+  .section-title {
+    margin: 0 0 0.35rem;
+    font-size: var(--font-size-h2);
+    color: var(--color-text);
+  }
+
+  .section-sub {
+    margin: 0 0 1.25rem;
+    color: var(--muted);
+    font-size: 0.95rem;
   }
 
   .courses-grid {

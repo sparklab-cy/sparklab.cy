@@ -1,9 +1,10 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
-  import type { Kit, OfficialCourse, CustomCourse } from '$lib/types/courses';
+  import type { OfficialCourse, CustomCourse } from '$lib/types/courses';
+  import { cart } from '$lib/stores/cart';
   
   const { data } = $props();
-  const { kit, officialCourses, communityCourses, hasAccess } = data;
+  const { kit, officialCourses, communityCourses, hasAccess, shopifyEnabled } = data;
   
   let selectedImage = $state(kit.image_url || '/default-kit-image.jpg');
   let quantity = $state(1);
@@ -17,6 +18,56 @@
     if (newQuantity >= 1 && newQuantity <= 10) {
       quantity = newQuantity;
     }
+  }
+
+  function formatMoney(amount: number, currency: string) {
+    try {
+      return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(amount);
+    } catch {
+      return `${currency} ${amount.toFixed(2)}`;
+    }
+  }
+
+  function notifyShopifyCart() {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('shopify-cart-updated'));
+    }
+  }
+
+  async function addShopifyToCart() {
+    if (!kit.shopifyVariantGid) return;
+    const res = await fetch('/api/shop/cart', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'add',
+        merchandiseId: kit.shopifyVariantGid,
+        quantity
+      })
+    });
+    const j = await res.json();
+    if (!res.ok || !j.success) return;
+    notifyShopifyCart();
+    cart.openCart();
+  }
+
+  async function buyShopifyNow() {
+    if (!kit.shopifyVariantGid) return;
+    const res = await fetch('/api/shop/cart', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'add',
+        merchandiseId: kit.shopifyVariantGid,
+        quantity
+      })
+    });
+    const j = await res.json();
+    if (!res.ok || !j.success) return;
+    notifyShopifyCart();
+    const r = await fetch('/api/shop/cart');
+    const d = await r.json();
+    if (d.checkoutUrl) window.location.href = d.checkoutUrl;
   }
 </script>
 
@@ -34,7 +85,7 @@
               src={image} 
               alt={kit.name}
               class:selected={selectedImage === image}
-              on:click={() => selectImage(image)}
+              onclick={() => selectImage(image)}
             />
           {/each}
         </div>
@@ -52,7 +103,7 @@
       </div>
       
       <div class="price-section">
-        <div class="price">${kit.price}</div>
+        <div class="price">{formatMoney(kit.displayPrice ?? kit.price, kit.currencyCode ?? 'USD')}</div>
         {#if kit.premium_upgrade_price}
           <div class="premium-price">Premium Upgrade: ${kit.premium_upgrade_price}</div>
         {/if}
@@ -100,7 +151,7 @@
           <div class="quantity-selector">
             <label for="quantity">Quantity:</label>
             <div class="quantity-controls">
-              <button type="button" on:click={() => updateQuantity(-1)}>-</button>
+              <button type="button" onclick={() => updateQuantity(-1)}>-</button>
               <input 
                 type="number" 
                 id="quantity" 
@@ -108,17 +159,28 @@
                 min="1" 
                 max="10"
               />
-              <button type="button" on:click={() => updateQuantity(1)}>+</button>
+              <button type="button" onclick={() => updateQuantity(1)}>+</button>
             </div>
           </div>
           
-          <form method="POST" action="?/purchaseKit" use:enhance>
-            <input type="hidden" name="kitId" value={kit.id} />
-            <input type="hidden" name="quantity" value={quantity} />
-            <button type="submit" class="purchase-btn">
-              Add to Cart - ${(kit.price * quantity).toFixed(2)}
-            </button>
-          </form>
+          {#if shopifyEnabled && kit.shopifyVariantGid}
+            <div class="shopify-actions">
+              <button type="button" class="add-to-cart-secondary" onclick={addShopifyToCart}>
+                Add to Cart ({formatMoney((kit.displayPrice ?? kit.price) * quantity, kit.currencyCode ?? 'USD')})
+              </button>
+              <button type="button" class="purchase-btn" onclick={buyShopifyNow}>
+                Buy now
+              </button>
+            </div>
+          {:else}
+            <form method="POST" action="?/purchaseKit" use:enhance>
+              <input type="hidden" name="kitId" value={kit.id} />
+              <input type="hidden" name="quantity" value={quantity} />
+              <button type="submit" class="purchase-btn">
+                Add to Cart - ${(kit.price * quantity).toFixed(2)}
+              </button>
+            </form>
+          {/if}
         {/if}
       </div>
     </div>
@@ -382,6 +444,29 @@
     padding: 0.5rem;
     background: var(--secondary-background);
     color: var(--color-text);
+  }
+
+  .shopify-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .add-to-cart-secondary {
+    width: 100%;
+    padding: 1rem;
+    background: var(--secondary-background);
+    color: var(--color-text);
+    border: var(--border-width) solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .add-to-cart-secondary:hover {
+    border-color: var(--color-primary);
   }
   
   .purchase-btn {

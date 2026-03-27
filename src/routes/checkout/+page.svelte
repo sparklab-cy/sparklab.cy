@@ -3,6 +3,10 @@
   import { enhance } from '$app/forms';
   import { goto } from '$app/navigation';
   
+  const { data } = $props();
+  const shopifyEnabled = $derived(Boolean(data.shopifyEnabled));
+  const shopifyCart = $derived(data.shopifyCart);
+
   let cartState = $state<{ items: CartItem[]; isOpen: boolean }>({ items: [], isOpen: false });
   let isProcessing = $state(false);
   
@@ -44,7 +48,33 @@
       <a href="/shop" class="continue-shopping">← Continue Shopping</a>
     </div>
     
-    {#if cartState.items.length === 0}
+    {#if shopifyEnabled}
+      {#if !shopifyCart?.lines?.length}
+          <div class="empty-cart">
+            <h2>Your cart is empty</h2>
+            <p>Add items to your cart on the shop, then return here.</p>
+            <a href="/shop" class="shop-btn">Go to Shop</a>
+          </div>
+      {:else}
+        <div class="shopify-checkout">
+          <p class="shopify-lead">
+            Complete payment and shipping on Shopify&apos;s secure checkout.
+          </p>
+          <ul class="shopify-summary">
+            {#each shopifyCart.lines as line}
+              <li>
+                <span>{line.title}{line.variantTitle ? ` — ${line.variantTitle}` : ''}</span>
+                <span>× {line.quantity}</span>
+              </li>
+            {/each}
+          </ul>
+          <p class="shopify-total">
+            Total: {shopifyCart.totalAmount} {shopifyCart.currencyCode}
+          </p>
+          <a href={shopifyCart.checkoutUrl} class="shopify-pay-btn">Continue to Shopify checkout</a>
+        </div>
+      {/if}
+    {:else if cartState.items.length === 0}
       <div class="empty-cart">
         <h2>Your cart is empty</h2>
         <p>Add some items to your cart to continue with checkout.</p>
@@ -196,6 +226,58 @@
 </div>
 
 <style>
+  .shopify-checkout {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 2rem;
+    background: var(--secondary-background);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+
+  .shopify-lead {
+    color: var(--color-text);
+    margin: 0 0 1rem;
+  }
+
+  .shopify-summary {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem;
+    color: var(--color-text);
+  }
+
+  .shopify-summary li {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .shopify-total {
+    font-weight: 700;
+    color: var(--color-primary);
+    margin: 0 0 1.25rem;
+  }
+
+  .shopify-pay-btn {
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+    padding: 1rem;
+    background: var(--color-primary);
+    color: var(--color-background);
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    box-sizing: border-box;
+  }
+
+  .shopify-pay-btn:hover {
+    background: var(--color-accent);
+  }
+
   .checkout-page {
     max-width: 1200px;
     margin: 0 auto;

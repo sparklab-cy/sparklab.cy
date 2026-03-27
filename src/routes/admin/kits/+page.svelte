@@ -1,5 +1,6 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
+  import { invalidateAll } from '$app/navigation';
   import type { Kit, KitCode, Purchase } from '$lib/types/courses';
   
   const { data, form } = $props();
@@ -67,8 +68,28 @@
       <section class="section">
         <div class="section-header">
           <h2>Kits</h2>
-          <button class="btn-primary" on:click={openCreateKit}>+ Create New Kit</button>
+          <div class="section-header-actions">
+            <form
+              method="POST"
+              action="?/syncShopifyKits"
+              use:enhance={() => {
+                return async ({ result, update }) => {
+                  await update({ reset: false });
+                  if (result.type === 'success') {
+                    await invalidateAll();
+                  }
+                };
+              }}
+            >
+              <button type="submit" class="btn-sync">Sync from Shopify</button>
+            </form>
+            <button class="btn-primary" on:click={openCreateKit}>+ Create New Kit</button>
+          </div>
         </div>
+        <p class="section-hint">
+          Pull product titles, prices, and images from your Shopify catalog into <code>kits</code>
+          (matched by handle). Requires Shopify env vars and <code>PRIVATE_SUPABASE_SERVICE_ROLE_KEY</code>.
+        </p>
         
         <div class="kits-grid">
           {#each kits as kit}
@@ -363,6 +384,45 @@
   .section-header h2 {
     color: #333;
     margin: 0;
+  }
+
+  .section-header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .section-header-actions form {
+    margin: 0;
+  }
+
+  .btn-sync {
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid #1976d2;
+    background: #fff;
+    color: #1976d2;
+  }
+
+  .btn-sync:hover {
+    background: #e3f2fd;
+  }
+
+  .section-hint {
+    margin: -0.75rem 0 1.25rem;
+    font-size: 0.875rem;
+    color: #666;
+    line-height: 1.45;
+  }
+
+  .section-hint code {
+    font-size: 0.8125rem;
+    background: #f5f5f5;
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
   }
   
   .kits-grid {

@@ -1,14 +1,73 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+  import { page } from '$app/state';
   import { cart, type CartItem } from '$lib/stores/cart';
   import { createEventDispatcher } from 'svelte';
   
   const dispatch = createEventDispatcher();
   
-  let cartState: { items: CartItem[]; isOpen: boolean };
+  let cartState = $state<{ items: CartItem[]; isOpen: boolean }>({ items: [], isOpen: false });
   
-  cart.subscribe(state => {
+  cart.subscribe((state) => {
     cartState = state;
   });
+
+  const shopifyEnabled = $derived(Boolean(page.data.shopifyEnabled));
+
+  type ShopifyLine = {
+    id: string;
+    quantity: number;
+    title: string;
+    variantTitle?: string;
+    price: string;
+    currency: string;
+    imageUrl?: string;
+  };
+
+  type ShopifyCartApi = {
+    id: string;
+    checkoutUrl: string;
+    totalQuantity: number;
+    totalAmount: string;
+    currencyCode: string;
+    lines: ShopifyLine[];
+  } | null;
+
+  let shopifyCart = $state<ShopifyCartApi>(null);
+  let shopifyLoading = $state(false);
+
+  async function refreshShopifyCart() {
+    shopifyLoading = true;
+    try {
+      const r = await fetch('/api/shop/cart');
+      const d = await r.json();
+      shopifyCart = d.cart ?? null;
+    } finally {
+      shopifyLoading = false;
+    }
+  }
+
+  $effect(() => {
+    if (cartState.isOpen && shopifyEnabled) {
+      refreshShopifyCart();
+    }
+  });
+
+  onMount(() => {
+    const onUpdate = () => {
+      if (shopifyEnabled) refreshShopifyCart();
+    };
+    window.addEventListener('shopify-cart-updated', onUpdate);
+    return () => window.removeEventListener('shopify-cart-updated', onUpdate);
+  });
+
+  function formatLineMoney(amount: string, currency: string) {
+    try {
+      return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(parseFloat(amount));
+    } catch {
+      return `${currency} ${amount}`;
+    }
+  }
   
   function removeItem(itemId: string) {
     cart.removeItem(itemId);
@@ -16,6 +75,26 @@
   
   function updateQuantity(itemId: string, quantity: number) {
     cart.updateQuantity(itemId, quantity);
+  }
+
+  async function removeShopifyLine(lineId: string) {
+    await fetch('/api/shop/cart', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'remove', lineIds: [lineId] })
+    });
+    window.dispatchEvent(new CustomEvent('shopify-cart-updated'));
+    await refreshShopifyCart();
+  }
+
+  async function shopifyQty(lineId: string, quantity: number) {
+    await fetch('/api/shop/cart', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'update', lineId, quantity })
+    });
+    window.dispatchEvent(new CustomEvent('shopify-cart-updated'));
+    await refreshShopifyCart();
   }
   
   function closeCart() {
@@ -26,6 +105,11 @@
     dispatch('checkout');
     closeCart();
   }
+
+  function goShopifyCheckout() {
+    const url = shopifyCart?.checkoutUrl;
+    if (url) window.location.href = url;
+  }
   
   function getTotal() {
     return cartState.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -33,17 +117,79 @@
 </script>
 
 {#if cartState.isOpen}
-  <div class="cart-overlay" on:click={closeCart}>
-    <div class="cart-panel" on:click|stopPropagation>
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="cart-overlay" onclick={closeCart}>
+    <div class="cart-panel" onclick={(e) => e.stopPropagation()}>
       <div class="cart-header">
         <h2>Shopping Cart</h2>
-        <button class="close-btn" on:click={closeCart}>×</button>
+        <button type="button" class="close-btn" onclick={closeCart}>×</button>
       </div>
       
-      {#if cartState.items.length === 0}
+      {#if shopifyEnabled}
+        {#if shopifyLoading}
+          <div class="empty-cart"><p>Loading cart…</p></div>
+        {:else if !shopifyCart?.lines?.length}
+          <div class="empty-cart">
+            <p>Your cart is empty</p>
+            <button type="button" class="continue-shopping" onclick={closeCart}>
+              Continue Shopping
+            </button>
+          </div>
+        {:else}
+          <div class="cart-items">
+            {#each shopifyCart.lines as line}
+              <div class="cart-item">
+                <div class="item-image">
+                  <img src={line.imageUrl || '/default-kit-image.jpg'} alt={line.title} />
+                </div>
+                <div class="item-details">
+                  <h3>{line.title}</h3>
+                  {#if line.variantTitle}
+                    <p class="item-type">{line.variantTitle}</p>
+                  {/if}
+                  <p class="item-price">{formatLineMoney(line.price, line.currency)}</p>
+                </div>
+                <div class="item-quantity">
+                  <button
+                    type="button"
+                    class="quantity-btn"
+                    onclick={() => shopifyQty(line.id, line.quantity - 1)}
+                    disabled={line.quantity <= 1}
+                  >-</button>
+                  <span class="quantity">{line.quantity}</span>
+                  <button type="button" class="quantity-btn" onclick={() => shopifyQty(line.id, line.quantity + 1)}>+</button>
+                </div>
+                <div class="item-total">
+                  {formatLineMoney(
+                    (parseFloat(line.price) * line.quantity).toFixed(2),
+                    line.currency
+                  )}
+                </div>
+                <button type="button" class="remove-btn" onclick={() => removeShopifyLine(line.id)} aria-label="Remove item">×</button>
+              </div>
+            {/each}
+          </div>
+          <div class="cart-footer">
+            <div class="cart-total">
+              <span>Total:</span>
+              <span class="total-amount">
+                {shopifyCart
+                  ? formatLineMoney(shopifyCart.totalAmount, shopifyCart.currencyCode)
+                  : ''}
+              </span>
+            </div>
+            <div class="cart-actions">
+              <button type="button" class="checkout-btn" onclick={goShopifyCheckout}>
+                Checkout on Shopify
+              </button>
+            </div>
+          </div>
+        {/if}
+      {:else if cartState.items.length === 0}
         <div class="empty-cart">
           <p>Your cart is empty</p>
-          <button class="continue-shopping" on:click={closeCart}>
+          <button type="button" class="continue-shopping" onclick={closeCart}>
             Continue Shopping
           </button>
         </div>
@@ -63,16 +209,18 @@
               
               <div class="item-quantity">
                 <button 
+                  type="button"
                   class="quantity-btn" 
-                  on:click={() => updateQuantity(item.id, item.quantity - 1)}
+                  onclick={() => updateQuantity(item.id, item.quantity - 1)}
                   disabled={item.quantity <= 1}
                 >
                   -
                 </button>
                 <span class="quantity">{item.quantity}</span>
                 <button 
+                  type="button"
                   class="quantity-btn" 
-                  on:click={() => updateQuantity(item.id, item.quantity + 1)}
+                  onclick={() => updateQuantity(item.id, item.quantity + 1)}
                 >
                   +
                 </button>
@@ -83,8 +231,9 @@
               </div>
               
               <button 
+                type="button"
                 class="remove-btn" 
-                on:click={() => removeItem(item.id)}
+                onclick={() => removeItem(item.id)}
                 aria-label="Remove item"
               >
                 ×
@@ -100,10 +249,10 @@
           </div>
           
           <div class="cart-actions">
-            <button class="clear-cart" on:click={cart.clearCart}>
+            <button type="button" class="clear-cart" onclick={() => cart.clearCart()}>
               Clear Cart
             </button>
-            <button class="checkout-btn" on:click={proceedToCheckout}>
+            <button type="button" class="checkout-btn" onclick={proceedToCheckout}>
               Proceed to Checkout
             </button>
           </div>
@@ -158,7 +307,7 @@
   
   .cart-header h2 {
     margin: 0;
-    color: var(--text);
+    color: var(--color-text);
     font-size: var(--font-size-h2);
   }
   
@@ -174,7 +323,7 @@
   }
   
   .close-btn:hover {
-    color: var(--text);
+    color: var(--color-text);
   }
   
   .empty-cart {
@@ -194,7 +343,7 @@
   
   .continue-shopping {
     padding: 0.75rem 1.5rem;
-    background: var(--primary-color);
+    background: var(--color-primary);
     color: var(--color-background);
     border: none;
     border-radius: 8px;
@@ -205,7 +354,7 @@
   }
   
   .continue-shopping:hover {
-    background: var(--primary-dark);
+    background: var(--color-accent);
     color: var(--color-background);
   }
   
@@ -243,7 +392,7 @@
   .item-details h3 {
     margin: 0 0 0.25rem 0;
     font-size: var(--font-size);
-    color: var(--text);
+    color: var(--color-text);
   }
   
   .item-type {
@@ -256,7 +405,7 @@
   .item-price {
     margin: 0;
     font-weight: 500;
-    color: var(--primary-color);
+    color: var(--color-primary);
   }
   
   .item-quantity {
@@ -269,8 +418,8 @@
     width: 28px;
     height: 28px;
     border: var(--border-width) solid var(--border);
-    background: var(--background);
-    color: var(--text);
+    background: var(--color-background);
+    color: var(--color-text);
     border-radius: 4px;
     cursor: pointer;
     display: flex;
@@ -282,9 +431,9 @@
   }
   
   .quantity-btn:hover:not(:disabled) {
-    background: var(--primary-color);
+    background: var(--color-primary);
     color: var(--color-background);
-    border-color: var(--primary-color);
+    border-color: var(--color-primary);
   }
   
   .quantity-btn:disabled {
@@ -301,7 +450,7 @@
   
   .item-total {
     font-weight: 600;
-    color: var(--text);
+    color: var(--color-text);
     min-width: 60px;
     text-align: right;
   }
@@ -335,11 +484,11 @@
     margin-bottom: 1rem;
     font-size: var(--font-size-h3);
     font-weight: 600;
-    color: var(--text);
+    color: var(--color-text);
   }
   
   .total-amount {
-    color: var(--primary-color);
+    color: var(--color-primary);
   }
   
   .cart-actions {
@@ -352,7 +501,7 @@
     padding: 0.75rem;
     background: var(--secondary-background);
     border: var(--border-width) solid var(--border);
-    color: var(--text);
+    color: var(--color-text);
     border-radius: 8px;
     cursor: pointer;
     font-weight: 500;
@@ -367,7 +516,7 @@
   .checkout-btn {
     flex: 2;
     padding: 0.75rem;
-    background: var(--primary-color);
+    background: var(--color-primary);
     color: var(--color-background);
     border: none;
     border-radius: 8px;
@@ -378,7 +527,7 @@
   }
   
   .checkout-btn:hover {
-    background: var(--primary-dark);
+    background: var(--color-accent);
     color: var(--color-background);
   }
   
@@ -410,4 +559,4 @@
       right: 0.5rem;
     }
   }
-</style> 
+</style>

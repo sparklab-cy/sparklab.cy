@@ -1,5 +1,7 @@
 import type { PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
+import type { LessonFile } from '$lib/types/courses';
+import { getSupabaseAdmin } from '$lib/server/supabaseAdmin';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
   const { courseId } = params;
@@ -11,70 +13,72 @@ export const load: PageServerLoad = async ({ params, locals }) => {
       throw redirect(302, `/login?redirect=/courses/community/${courseId}`);
     }
 
-    // Load community course — RLS already filters based on user's grants,
-    // but we check is_published too. Creators can always see their own course.
+    // Load course (draft + invite-only rows visible via RLS to creator or grant holders)
     const { data: course, error: courseError } = await supabase
       .from('custom_courses')
-      .select(`
-        *,
-        creator:profiles(full_name, email)
-      `)
+      .select('*')
       .eq('id', courseId)
-      .eq('is_published', true)
       .single();
 
     if (courseError || !course) {
       throw redirect(302, '/courses');
     }
 
-    // Check access: public course OR user has an explicit access grant OR user is creator
-    const isCreator = course.creator_id === user.id;
-    let hasAccess = isCreator || course.is_public;
-
-    if (!hasAccess) {
-      const { data: grant } = await supabase
-        .from('course_access_grants')
-        .select('id')
-        .eq('course_id', courseId)
-        .eq('user_id', user.id)
-        .single();
-      hasAccess = !!grant;
+    const admin = getSupabaseAdmin();
+    let creator: { full_name: string | null } = { full_name: null };
+    if (admin && course.creator_id) {
+      const { data: prof } = await admin
+        .from('profiles')
+        .select('full_name')
+        .eq('id', course.creator_id)
+        .maybeSingle();
+      creator = { full_name: prof?.full_name ?? null };
     }
+
+    const courseWithCreator = { ...course, creator };
+
+    const isCreator = course.creator_id === user.id;
+
+    const { data: grantRow } = await supabase
+      .from('course_access_grants')
+      .select('id, joined_at')
+      .eq('course_id', courseId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    const hasGrant = !!grantRow;
+
+    // Published public catalog OR creator OR invited user (draft OK for invitees)
+    const hasAccess =
+      isCreator ||
+      hasGrant ||
+      (course.is_public === true && course.is_published === true);
 
     if (!hasAccess) {
       throw redirect(302, '/courses?error=access_denied');
     }
 
-    // Check if user has access to the kit (still required to take the course)
-    if (!isCreator) {
+    // Kit required only for published public catalog courses (not for invite-only access)
+    if (!isCreator && course.is_public && course.is_published) {
       const { data: userPermissions } = await supabase
         .from('user_permissions')
         .select('id')
         .eq('user_id', user.id)
         .eq('kit_id', course.kit_id)
         .eq('permission_type', 'course_access')
-        .single();
+        .maybeSingle();
 
       if (!userPermissions) {
-        throw redirect(302, `/shop/${course.kit_id}`);
+        throw redirect(302, `/shop`);
       }
     }
 
     // Mark joined_at if this is the first time the user is accessing this course
-    if (!isCreator) {
-      const { data: grant } = await supabase
+    if (!isCreator && grantRow && !grantRow.joined_at) {
+      await supabase
         .from('course_access_grants')
-        .select('id, joined_at')
-        .eq('course_id', courseId)
-        .eq('user_id', user.id)
-        .single();
-
-      if (grant && !grant.joined_at) {
-        await supabase
-          .from('course_access_grants')
-          .update({ joined_at: new Date().toISOString() })
-          .eq('id', grant.id);
-      }
+        .update({ joined_at: new Date().toISOString() })
+        .eq('id', grantRow.id);
     }
 
     // Load lessons — filter by per-user visibility deny-list
@@ -102,6 +106,22 @@ export const load: PageServerLoad = async ({ params, locals }) => {
       lessons = lessons.filter((l: { id: string }) => !hiddenIds.has(l.id));
     }
 
+    const lessonIds = lessons.map((l: { id: string }) => l.id);
+    const lessonFilesMap: Record<string, LessonFile[]> = {};
+    if (lessonIds.length > 0) {
+      const { data: allFiles } = await supabase
+        .from('lesson_files')
+        .select('*')
+        .in('lesson_id', lessonIds)
+        .order('tab_order', { ascending: true });
+
+      for (const file of allFiles ?? []) {
+        const f = file as LessonFile;
+        if (!lessonFilesMap[f.lesson_id]) lessonFilesMap[f.lesson_id] = [];
+        lessonFilesMap[f.lesson_id].push(f);
+      }
+    }
+
     // Load user progress
     const { data: userProgress } = await supabase
       .from('user_lesson_progress')
@@ -111,8 +131,9 @@ export const load: PageServerLoad = async ({ params, locals }) => {
       .eq('course_type', 'custom');
 
     return {
-      course,
+      course: courseWithCreator,
       lessons,
+      lessonFilesMap,
       userProgress: userProgress || [],
       error: null
     };

@@ -62,7 +62,8 @@ const supabase: Handle = async ({ event, resolve }) => {
 	})
 }
 
-const protectedPrefixes = ['/admin', '/profile', '/create-course', '/checkout', '/redeem', '/courses']
+// /checkout is public so guests can review the cart and continue to Shopify checkout
+const protectedPrefixes = ['/admin', '/profile', '/create-course', '/redeem', '/courses']
 
 const authGuard: Handle = async ({ event, resolve }) => {
 	const { session, user } = await event.locals.safeGetSession()

@@ -1,647 +1,383 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
-  import { enhance } from '$app/forms';
-  import { cart } from '$lib/stores/cart';
-  import type { Kit, CustomCourse } from '$lib/types/courses';
-  
-  const { data, form } = $props();
-  const { kits, userKits, error } = data;
-  
-  // Ensure userKits is typed as string array
-  const userKitIds: string[] = userKits || [];
+	import { cart } from '$lib/stores/cart';
+	type ShopProduct = {
+		id: string;
+		handle: string;
+		title: string;
+		description: string;
+		imageUrl: string | null;
+		variantId: string;
+		priceAmount: number;
+		currencyCode: string;
+		availableForSale: boolean;
+	};
 
-  // Search and filter state
-  let searchQuery = $state('');
-  let selectedLevel = $state('all');
-  let selectedTheme = $state('all');
-  let sortBy = $state('name');
-  
-	// Countdown to the shop opening date
-	// Note: target year rolls over if the date has already passed.
-	const nowAtInit = new Date();
-	const targetYear =
-		nowAtInit.getMonth() > 2 || (nowAtInit.getMonth() === 2 && nowAtInit.getDate() > 28)
-			? nowAtInit.getFullYear() + 1
-			: nowAtInit.getFullYear();
-	const targetDate = new Date(targetYear, 2, 28, 23, 59, 59, 999);
-	const targetTime = targetDate.getTime();
+	const { data } = $props();
+	const products = $derived(data.products ?? []);
+	const { error, shopifyEnabled } = data;
 
-	let nowMs = $state(Date.now());
+	let searchQuery = $state('');
+	let sortBy = $state<'title' | 'price-asc' | 'price-desc'>('title');
 
-	const remainingMs = $derived(Math.max(targetTime - nowMs, 0));
-	const isLive = $derived(remainingMs <= 0);
-	const remainingSeconds = $derived(Math.floor(remainingMs / 1000));
+	const filteredProducts = $derived(
+		products
+			.filter((p) => {
+				const q = searchQuery.trim().toLowerCase();
+				if (!q) return true;
+				return (
+					p.title.toLowerCase().includes(q) || p.description.toLowerCase().includes(q)
+				);
+			})
+			.slice()
+			.sort((a, b) => {
+				switch (sortBy) {
+					case 'price-asc':
+						return a.priceAmount - b.priceAmount;
+					case 'price-desc':
+						return b.priceAmount - a.priceAmount;
+					default:
+						return a.title.localeCompare(b.title);
+				}
+			})
+	);
 
-	const days = $derived(Math.floor(remainingSeconds / 86400));
-	const hours = $derived(Math.floor((remainingSeconds % 86400) / 3600));
-	const minutes = $derived(Math.floor((remainingSeconds % 3600) / 60));
-	const seconds = $derived(remainingSeconds % 60);
-
-	function pad2(n: number) {
-		return n.toString().padStart(2, '0');
+	function formatMoney(amount: number, currency: string) {
+		try {
+			return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(amount);
+		} catch {
+			return `${currency} ${amount.toFixed(2)}`;
+		}
 	}
 
-	onMount(() => {
-		const id = window.setInterval(() => {
-			nowMs = Date.now();
-		}, 1000);
-
-		return () => window.clearInterval(id);
-	});
-
-  // Available filters
-  const levels = ['all', ...Array.from(new Set(kits.map(kit => kit.level)))];
-  const themes = ['all', ...Array.from(new Set(kits.map(kit => kit.theme)))];
-  
-  // Filtered and sorted kits
-  const filteredKits = $derived(kits.filter(kit => {
-	const matchesSearch = kit.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-						 kit.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-						 kit.theme.toLowerCase().includes(searchQuery.toLowerCase());
-	const matchesLevel = selectedLevel === 'all' || kit.level === parseInt(selectedLevel);
-	const matchesTheme = selectedTheme === 'all' || kit.theme === selectedTheme;
-	
-	return matchesSearch && matchesLevel && matchesTheme;
-  }).sort((a, b) => {
-	switch (sortBy) {
-	  case 'name':
-		return a.name.localeCompare(b.name);
-	  case 'price-low':
-		return a.price - b.price;
-	  case 'price-high':
-		return b.price - a.price;
-	  case 'level':
-		return a.level - b.level;
-	  default:
-		return 0;
+	function notifyShopifyCart() {
+		if (typeof window !== 'undefined') {
+			window.dispatchEvent(new CustomEvent('shopify-cart-updated'));
+		}
 	}
-  }));
-  
-  function addToCart(kit: Kit) {
-	cart.addItem({
-	  id: kit.id,
-	  type: 'kit',
-	  name: kit.name,
-	  price: kit.price,
-	  image: kit.image_url,
-	  description: kit.description
-	});
-  }
-  
-  function hasKitAccess(kitId: string): boolean {
-	return userKitIds.includes(kitId);
-  }
-  
-  function clearFilters() {
-	searchQuery = '';
-	selectedLevel = 'all';
-	selectedTheme = 'all';
-	sortBy = 'name';
-  }
+
+	function productPath(handle: string) {
+		return `/shop/products/${handle}`;
+	}
+
+	async function addToCart(p: ShopProduct) {
+		if (!p.availableForSale) return;
+		const res = await fetch('/api/shop/cart', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				action: 'add',
+				merchandiseId: p.variantId,
+				quantity: 1
+			})
+		});
+		const j = await res.json();
+		if (!res.ok || !j.success) {
+			console.error(j);
+			return;
+		}
+		notifyShopifyCart();
+		cart.openCart();
+	}
+
+	async function buyNow(p: ShopProduct) {
+		if (!p.availableForSale) return;
+		const res = await fetch('/api/shop/cart', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				action: 'add',
+				merchandiseId: p.variantId,
+				quantity: 1
+			})
+		});
+		const j = await res.json();
+		if (!res.ok || !j.success) {
+			console.error(j);
+			return;
+		}
+		notifyShopifyCart();
+		const r = await fetch('/api/shop/cart');
+		const d = await r.json();
+		if (d.checkoutUrl && typeof d.checkoutUrl === 'string') {
+			window.location.href = d.checkoutUrl;
+		}
+	}
 </script>
 
 <div class="shop-page">
-  <h1>ByteBlocks Shop</h1>
-  
-  {#if form?.message}
-	<div class="message success">{form.message}</div>
-  {/if}
-  
-  {#if form?.error}
-	<div class="message error">{form.error}</div>
-  {/if}
-  
-  {#if error}
-	<div class="message error">{error}</div>
-  {:else}
-		{#if !isLive}
-			<section class="coming-soon" aria-live="polite">
-				<div class="coming-soon-inner">
-					<h2>Coming Soon</h2>
-					<p class="coming-soon-sub">
-						ByteBlocks Shop opens on <span class="date">March 28</span>.
-					</p>
+	<h1>Shop</h1>
+	<p class="lead">All purchases are completed securely through Shopify checkout.</p>
 
-					<div class="countdown">
-						<div class="time-box">
-							<div class="time-num">{days}</div>
-							<div class="time-label">Days</div>
-						</div>
-						<div class="time-box">
-							<div class="time-num">{pad2(hours)}</div>
-							<div class="time-label">Hours</div>
-						</div>
-						<div class="time-box">
-							<div class="time-num">{pad2(minutes)}</div>
-							<div class="time-label">Minutes</div>
-						</div>
-						<div class="time-box">
-							<div class="time-num">{pad2(seconds)}</div>
-							<div class="time-label">Seconds</div>
-						</div>
-					</div>
-				</div>
-			</section>
+	{#if error}
+		<div class="message error">{error}</div>
+	{:else if !shopifyEnabled}
+		<div class="message error">Shopify is not configured.</div>
+	{:else}
+		<div class="toolbar">
+			<input
+				type="search"
+				class="search"
+				placeholder="Search products…"
+				bind:value={searchQuery}
+				aria-label="Search products"
+			/>
+			<select class="sort" bind:value={sortBy} aria-label="Sort products">
+				<option value="title">Name</option>
+				<option value="price-asc">Price: low to high</option>
+				<option value="price-desc">Price: high to low</option>
+			</select>
+		</div>
+
+		<p class="results-meta">{filteredProducts.length} product{filteredProducts.length === 1 ? '' : 's'}</p>
+
+		{#if filteredProducts.length === 0}
+			<p class="empty">No products to show. Add products in Shopify Admin or assign them to your collection.</p>
 		{:else}
-			<!-- Search and Filters -->
-			<div class="search-filters">
-			  <div class="search-bar">
-				<input 
-				  type="text" 
-				  placeholder="Search kits by name, description, or theme..."
-				  bind:value={searchQuery}
-				/>
-			  </div>
-			  
-			  <div class="filters">
-				<select bind:value={selectedLevel}>
-				  {#each levels as level}
-					<option value={level}>
-					  {level === 'all' ? 'All Levels' : `Level ${level}`}
-					</option>
-				  {/each}
-				</select>
-				
-				<select bind:value={selectedTheme}>
-				  {#each themes as theme}
-					<option value={theme}>
-					  {theme === 'all' ? 'All Themes' : theme}
-					</option>
-				  {/each}
-				</select>
-				
-				<select bind:value={sortBy}>
-				  <option value="name">Sort by Name</option>
-				  <option value="price-low">Price: Low to High</option>
-				  <option value="price-high">Price: High to Low</option>
-				  <option value="level">Sort by Level</option>
-				</select>
-				
-				<button on:click={clearFilters} class="clear-filters">
-				  Clear Filters
-				</button>
-			  </div>
-			  
-			  <div class="results-count">
-				{filteredKits.length} kit{filteredKits.length !== 1 ? 's' : ''} found
-			  </div>
-			</div>
-			
-			<!-- Kits Section -->
-			<section class="shop-section">
-			  <h2>Available Kits</h2>
-			  <p>Purchase kits to unlock official courses and create your own community courses.</p>
-			  
-			  <div class="kits-grid">
-				{#each filteredKits as kit}
-				  <div class="kit-card">
-					<div class="kit-image">
-					  <img src={kit.image_url || '/default-kit-image.jpg'} alt={kit.name} />
-					</div>
-					<div class="kit-content">
-					  <div class="kit-header">
-						<h3>{kit.name}</h3>
-						<span class="level">Level {kit.level}</span>
-					  </div>
-					  <p class="theme">{kit.theme}</p>
-					  <p class="description">{kit.description}</p>
-					  <div class="price">${kit.price}</div>
-					  
-					  <div class="kit-actions">
-						<a href="/shop/{kit.id}" class="view-details-btn">View Details</a>
-						
-						{#if hasKitAccess(kit.id)}
-						  <div class="owned-badge">Owned</div>
-						{:else}
-						  <div class="purchase-options">
-							  <button
-								type="button"
-								class="add-to-cart-btn"
-								on:click={() => addToCart(kit)}
-							  >
-								Add to Cart
-							  </button>
-							  <form method="POST" action="?/purchaseKit" use:enhance>
-								<input type="hidden" name="kitId" value={kit.id} />
-								<button type="submit" class="purchase-btn">
-								  Buy Now
+			<div class="grid">
+				{#each filteredProducts as p}
+					<article class="card">
+						<a href={productPath(p.handle)} class="card-image-link">
+							<img
+								src={p.imageUrl || '/default-kit-image.jpg'}
+								alt=""
+								class="card-image"
+							/>
+						</a>
+						<div class="card-body">
+							<h2 class="card-title">
+								<a href={productPath(p.handle)} class="card-title-link">{p.title}</a>
+							</h2>
+							<p class="card-desc">{p.description}</p>
+							<p class="card-price">{formatMoney(p.priceAmount, p.currencyCode)}</p>
+							<div class="card-actions">
+								<button
+									type="button"
+									class="btn secondary"
+									disabled={!p.availableForSale}
+									onclick={() => addToCart(p)}
+								>
+									Add to cart
 								</button>
-							  </form>
-						  </div>
-						{/if}
-					  </div>
-					</div>
-				  </div>
+								<button
+									type="button"
+									class="btn primary"
+									disabled={!p.availableForSale}
+									onclick={() => buyNow(p)}
+								>
+									Buy now
+								</button>
+								<a class="btn link" href={productPath(p.handle)}>View details</a>
+							</div>
+						</div>
+					</article>
 				{/each}
-			  </div>
-			</section>
-			
-			<!-- Community Courses Link -->
-			<section class="shop-section">
-			  <div class="community-courses-link">
-				<h2>Community Courses</h2>
-				<p>Discover amazing courses created by the ByteBlocks community. Learn from fellow makers and share your knowledge.</p>
-				<a href="/shop/community-courses" class="community-btn">
-				  Browse Community Courses
-				</a>
-			  </div>
-			</section>
+			</div>
 		{/if}
-  {/if}
+	{/if}
 </div>
 
 <style>
-  .shop-page {
-	max-width: 1200px;
-	margin: 0 auto;
-	padding: 2rem;
-  }
+	.shop-page {
+		max-width: 1200px;
+		margin: 0 auto;
+		padding: 2rem;
+	}
 
-  .coming-soon {
-	border: none;
-	border-radius: 0;
-	background: transparent;
-	padding: 3rem 0 4rem;
-	margin: 0;
-	text-align: center;
-  }
+	h1 {
+		text-align: center;
+		color: var(--color-text);
+		font-size: var(--font-size-h1);
+		margin-bottom: 0.5rem;
+	}
 
-  .coming-soon-inner {
-	max-width: 900px;
-	margin: 0 auto;
-  }
+	.lead {
+		text-align: center;
+		color: var(--muted);
+		margin: 0 0 2rem;
+		font-size: var(--font-size);
+	}
 
-  .coming-soon h2 {
-	color: var(--color-primary);
-	margin: 0 0 0.5rem;
-	font-size: var(--font-size-h2);
-  }
+	.message.error {
+		padding: 1rem 1.25rem;
+		border-radius: 8px;
+		border: 1px solid #dc3545;
+		background: rgba(220, 53, 69, 0.08);
+		color: #dc3545;
+		max-width: 560px;
+		margin: 0 auto;
+		text-align: center;
+	}
 
-  .coming-soon-sub {
-	margin: 0 0 1.25rem;
-	color: var(--color-text);
-	font-size: var(--font-size);
-  }
+	.toolbar {
+		display: flex;
+		gap: 1rem;
+		flex-wrap: wrap;
+		margin-bottom: 0.75rem;
+		align-items: center;
+	}
 
-  .coming-soon-sub .date {
-	font-weight: 800;
-	color: var(--color-primary);
-  }
+	.search {
+		flex: 1;
+		min-width: 200px;
+		padding: 0.65rem 1rem;
+		border: var(--border-width) solid var(--border);
+		border-radius: 8px;
+		background: var(--color-background);
+		color: var(--color-text);
+		font-size: var(--font-size);
+	}
 
-  .countdown {
-	display: flex;
-	gap: 1rem;
-	justify-content: center;
-	flex-wrap: wrap;
-  }
+	.sort {
+		padding: 0.65rem 1rem;
+		border: var(--border-width) solid var(--border);
+		border-radius: 8px;
+		background: var(--color-background);
+		color: var(--color-text);
+		font-size: var(--font-size);
+	}
 
-  .time-box {
-	min-width: 110px;
-	border: none;
-	border-radius: 0;
-	background: transparent;
-	padding: 0.85rem 1rem;
-  }
+	.results-meta {
+		color: var(--muted);
+		font-size: var(--font-size);
+		margin-bottom: 1.5rem;
+	}
 
-  .time-num {
-	font-size: 1.65rem;
-	font-weight: 900;
-	color: var(--color-text);
-	line-height: 1.1;
-  }
+	.empty {
+		text-align: center;
+		color: var(--muted);
+		padding: 2rem;
+	}
 
-  .time-label {
-	margin-top: 0.35rem;
-	color: var(--muted);
-	font-weight: 600;
-	font-size: var(--font-size-sm);
-  }
+	.grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+		gap: 1.5rem;
+	}
 
-  .add-to-cart-btn:disabled,
-  .purchase-btn:disabled {
-	opacity: 0.65;
-	cursor: not-allowed;
-	border-color: var(--border);
-	background: var(--secondary-background);
-  }
-  
-  .shop-page h1 {
-	margin-bottom: 2rem;
-	text-align: center;
-	color: var(--color-text);
-	font-size: var(--font-size-h1);
-  }
-  
-  .search-filters {
-	border: var(--border-width) solid var(--border);
-	border-radius: 8px;
-	padding: 1.5rem;
-	margin-bottom: 2rem;
-	background: var(--secondary-background);
-  }
-  
-  .search-bar {
-	margin-bottom: 1rem;
-  }
-  
-  .search-bar input {
-	width: 100%;
-	padding: 0.75rem 1rem;
-	border: var(--border-width) solid var(--border);
-	border-radius: 8px;
-	font-size: var(--font-size);
-	background: var(--color-background);
-	color: var(--color-text);
-	transition: border-color 0.2s ease;
-  }
-  
-  .search-bar input:focus {
-	outline: none;
-	border-color: var(--color-primary);
-  }
-  
-  .filters {
-	display: flex;
-	gap: 1rem;
-	margin-bottom: 1rem;
-	flex-wrap: wrap;
-  }
-  
-  .filters select {
-	padding: 0.5rem 0.75rem;
-	border: var(--border-width) solid var(--border);
-	border-radius: 8px;
-	font-size: var(--font-size);
-	background: var(--color-background);
-	color: var(--color-text);
-	cursor: pointer;
-	transition: border-color 0.2s ease;
-  }
-  
-  .filters select:focus {
-	outline: none;
-	border-color: var(--color-primary);
-  }
-  
-  .clear-filters {
-	padding: 0.5rem 1rem;
-	border: var(--border-width) solid var(--border);
-	border-radius: 8px;
-	cursor: pointer;
-	font-size: var(--font-size);
-	background: var(--secondary-background);
-	color: var(--color-text);
-	transition: all 0.2s ease;
-  }
-  
-  .clear-filters:hover {
-	background: var(--secondary-background);
-	color: var(--color-text);
-	border-color: var(--color-primary);
-  }
-  
-  .results-count {
-	font-size: var(--font-size);
-	color: var(--color-text);
-  }
-  
-  .shop-section {
-	margin-bottom: 4rem;
-  }
-  
-  .shop-section h2 {
-	margin-bottom: 1rem;
-	color: var(--color-text);
-	font-size: var(--font-size-h2);
-  }
-  
-  .shop-section p {
-	margin-bottom: 2rem;
-	color: var(--color-text);
-	font-size: var(--font-size);
-  }
-  
-  .kits-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-	gap: 2rem;
-  }
-  
-  .kit-card {
-	border: var(--border-width) solid var(--border);
-	border-radius: 8px;
-	overflow: hidden;
-	background: var(--secondary-background);
-	transition: all 0.3s ease;
-  }
-  
-  .kit-card:hover {
-	border-color: var(--border);
-	box-shadow: 0 6px 16px rgba(94, 96, 206, 0.15);
-	transform: translateY(-4px);
-  }
-  
-  .kit-image {
-	width: 100%;
-	height: 200px;
-	overflow: hidden;
-  }
-  
-  .kit-image img {
-	width: 100%;
-	height: 100%;
-	object-fit: cover;
-  }
-  
-  .kit-content {
-	padding: 1.5rem;
-  }
-  
-  .kit-header {
-	display: flex;
-	justify-content: space-between;
-	align-items: flex-start;
-	margin-bottom: 1rem;
-  }
-  
-  .kit-header h3 {
-	margin: 0;
-	font-size: var(--font-size-h3);
-	color: var(--color-text);
-  }
-  
-  .level {
-	border: var(--border-width) solid var(--border);
-	padding: 4px 8px;
-	border-radius: 6px;
-	font-size: var(--font-size);
-	font-weight: bold;
-	color: var(--color-text);
-	background: var(--secondary-background);
-  }
-  
-  .theme {
-	font-style: italic;
-	margin-bottom: 1rem;
-	color: var(--color-secondary);
-  }
-  
-  .description {
-	line-height: 1.5;
-	margin-bottom: 1rem;
-	color: var(--color-text);
-  }
-  
-  .price {
-	font-size: var(--font-size-h3);
-	font-weight: bold;
-	margin-bottom: 1rem;
-	color: var(--color-text);
-  }
-  
-  .kit-actions {
-	display: flex;
-	gap: 0.5rem;
-	flex-wrap: wrap;
-  }
-  
-  .purchase-options {
-	display: flex;
-	gap: 0.5rem;
-	width: 100%;
-  }
-  
-  .add-to-cart-btn {
-	padding: 12px 24px;
-	border: var(--border-width) solid var(--border);
-	border-radius: 8px;
-	font-size: var(--font-size);
-	font-weight: 500;
-	cursor: pointer;
-	flex: 1;
-	background: var(--secondary-background);
-	color: var(--color-text);
-	transition: all 0.2s ease;
-  }
-  
-  .add-to-cart-btn:hover {
-	background: var(--secondary-background);
-	color: var(--color-text);
-	border-color: var(--color-primary);
-  }
-  
-  .view-details-btn {
-	padding: 0.5rem 1rem;
-	text-decoration: none;
-	border: var(--border-width) solid var(--border);
-	border-radius: 8px;
-	font-size: var(--font-size);
-	display: inline-block;
-	color: var(--color-text);
-	background: var(--secondary-background);
-	transition: all 0.2s ease;
-  }
-  
-  .view-details-btn:hover {
-	background: var(--secondary-background);
-	color: var(--color-text);
-	border-color: var(--color-primary);
-  }
-  
-  .purchase-btn {
-	padding: 12px 24px;
-	border: var(--border-width) solid var(--color-primary);
-	border-radius: 8px;
-	font-size: var(--font-size);
-	font-weight: bold;
-	cursor: pointer;
-	flex: 1;
-	background: var(--color-primary);
-	color: var(--color-background);
-	transition: all 0.2s ease;
-  }
-  
-  .purchase-btn:hover {
-	background: var(--color-accent);
-	border-color: var(--color-accent);
-	transform: translateY(-2px);
-	box-shadow: 0 4px 12px rgba(94, 96, 206, 0.3);
-  }
-  
-  .owned-badge {
-	border: var(--border-width) solid var(--border);
-	padding: 8px 16px;
-	border-radius: 8px;
-	text-align: center;
-	font-weight: bold;
-	flex: 1;
-	background: var(--secondary-background);
-	color: var(--color-text);
-	font-size: var(--font-size);
-  }
-  
-  .community-courses-link {
-	text-align: center;
-	padding: 3rem 2rem;
-	border: var(--border-width) solid var(--border);
-	border-radius: 8px;
-	background: var(--secondary-background);
-  }
-  
-  .community-courses-link h2 {
-	margin-bottom: 1rem;
-	color: var(--color-text);
-	font-size: var(--font-size-h2);
-  }
-  
-  .community-courses-link p {
-	margin-bottom: 2rem;
-	max-width: 600px;
-	margin-left: auto;
-	margin-right: auto;
-	color: var(--color-text);
-  }
-  
-  .community-btn {
-	display: inline-block;
-	padding: 1rem 2rem;
-	border: var(--border-width) solid var(--color-primary);
-	text-decoration: none;
-	border-radius: 8px;
-	font-weight: bold;
-	font-size: var(--font-size);
-	background: var(--color-primary);
-	color: var(--color-background);
-	transition: all 0.3s ease;
-  }
-  
-  .community-btn:hover {
-	background: var(--color-accent);
-	border-color: var(--color-accent);
-	transform: translateY(-2px);
-	box-shadow: 0 4px 12px rgba(94, 96, 206, 0.3);
-  }
-  
-  .message {
-	padding: 1rem;
-	border-radius: 8px;
-	text-align: center;
-	margin-bottom: 2rem;
-	border: var(--border-width) solid var(--border);
-	background: var(--color-background);
-	font-size: var(--font-size);
-  }
-  
-  .message.error {
-	border-color: #dc3545;
-	background: rgba(220, 53, 69, 0.1);
-	color: #dc3545;
-  }
-  
-  .message.success {
-	border-color: var(--color-tertiary);
-	background: rgba(72, 191, 227, 0.1);
-	color: var(--color-tertiary);
-  }
+	.card {
+		border: var(--border-width) solid var(--border);
+		border-radius: 12px;
+		overflow: hidden;
+		background: var(--secondary-background);
+		display: flex;
+		flex-direction: column;
+	}
+
+	.card-image-link {
+		display: block;
+		aspect-ratio: 4 / 3;
+		background: var(--color-background);
+	}
+
+	.card-image {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.card-body {
+		padding: 1.25rem;
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+		gap: 0.75rem;
+	}
+
+	.card-title {
+		margin: 0;
+		font-size: var(--font-size-h3);
+		color: var(--color-text);
+		line-height: 1.25;
+	}
+
+	.card-title-link {
+		color: inherit;
+		text-decoration: none;
+	}
+
+	.card-title-link:hover {
+		color: var(--color-primary);
+		text-decoration: underline;
+		text-underline-offset: 3px;
+	}
+
+	.card-desc {
+		margin: 0;
+		font-size: var(--font-size);
+		color: var(--color-text);
+		line-height: 1.5;
+		flex: 1;
+		display: -webkit-box;
+		line-clamp: 4;
+		-webkit-line-clamp: 4;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+
+	.card-price {
+		margin: 0;
+		font-size: var(--font-size-h3);
+		font-weight: 700;
+		color: var(--color-primary);
+	}
+
+	.card-actions {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.65rem 1rem;
+		border-radius: 8px;
+		font-size: var(--font-size);
+		font-weight: 600;
+		cursor: pointer;
+		border: var(--border-width) solid transparent;
+		text-decoration: none;
+		text-align: center;
+		box-sizing: border-box;
+	}
+
+	.btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.btn.primary {
+		background: var(--color-primary);
+		color: var(--color-background);
+		border-color: var(--color-primary);
+	}
+
+	.btn.primary:hover:not(:disabled) {
+		background: var(--color-accent);
+		border-color: var(--color-accent);
+	}
+
+	.btn.secondary {
+		background: var(--secondary-background);
+		color: var(--color-text);
+		border-color: var(--border);
+	}
+
+	.btn.secondary:hover:not(:disabled) {
+		border-color: var(--color-primary);
+	}
+
+	.btn.link {
+		background: transparent;
+		color: var(--color-primary);
+		border-color: transparent;
+		text-decoration: underline;
+		text-underline-offset: 3px;
+		font-weight: 500;
+	}
+
+	.btn.link:hover {
+		color: var(--color-accent);
+	}
 </style>

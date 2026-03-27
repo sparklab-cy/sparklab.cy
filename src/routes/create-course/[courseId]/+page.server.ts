@@ -1,5 +1,6 @@
 import { redirect, error } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
+import { getAuthUserIdByEmail } from '$lib/server/supabaseAdmin';
 
 export const load: PageServerLoad = async ({ params, locals, url }) => {
 	const { courseId } = params;
@@ -52,7 +53,7 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 	// Load access grants with grantee profile info (includes joined_at)
 	const { data: accessGrants } = await supabase
 		.from('course_access_grants')
-		.select('*, profiles:user_id(id, full_name, email)')
+		.select('*, profiles:user_id(id, full_name)')
 		.eq('course_id', courseId)
 		.order('created_at', { ascending: true });
 
@@ -202,33 +203,29 @@ export const actions: Actions = {
 
 		if (course?.creator_id !== user.id) return { success: false, error: 'Forbidden' };
 
-		// Look up the target user by email via auth.users (available via supabase admin)
-		// Fall back to profiles table which stores email
-		const { data: targetProfile } = await supabase
-			.from('profiles')
-			.select('id, full_name, email')
-			.eq('email', email)
-			.single();
-
-		if (!targetProfile) {
-			return { success: false, error: 'No account found with that email address' };
+		const targetId = await getAuthUserIdByEmail(email);
+		if (!targetId) {
+			return {
+				success: false,
+				error: 'No account found with that email. They must sign up first.'
+			};
 		}
 
-		if (targetProfile.id === user.id) {
+		if (targetId === user.id) {
 			return { success: false, error: 'You cannot grant access to yourself' };
 		}
 
 		const { error: err } = await supabase.from('course_access_grants').upsert(
 			{
 				course_id: params.courseId,
-				user_id: targetProfile.id,
+				user_id: targetId,
 				granted_by: user.id
 			},
-			{ onConflict: 'course_id,user_id', ignoreDuplicates: true }
+			{ onConflict: 'course_id,user_id' }
 		);
 
 		if (err) return { success: false, error: err.message };
-		return { success: true, message: `Access granted to ${targetProfile.full_name ?? email}` };
+		return { success: true, message: `Access granted to ${email}` };
 	},
 
 	revokeAccess: async ({ request, params, locals }) => {
