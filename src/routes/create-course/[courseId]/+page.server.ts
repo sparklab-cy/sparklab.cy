@@ -166,6 +166,15 @@ export const actions: Actions = {
 			.eq('id', lessonId);
 
 		if (err) return { success: false, error: err.message };
+
+		// Keep course row in sync: catalog + viewer require custom_courses.is_published (list page sets this;
+		// lesson-only publishing used to leave the course as draft forever).
+		await supabase
+			.from('custom_courses')
+			.update({ is_published: true })
+			.eq('id', params.courseId)
+			.eq('creator_id', user.id);
+
 		return { success: true };
 	},
 
@@ -193,6 +202,22 @@ export const actions: Actions = {
 			.eq('id', lessonId);
 
 		if (err) return { success: false, error: err.message };
+
+		const { count } = await supabase
+			.from('lessons')
+			.select('*', { count: 'exact', head: true })
+			.eq('course_id', params.courseId)
+			.eq('course_type', 'custom')
+			.eq('is_published', true);
+
+		if ((count ?? 0) === 0) {
+			await supabase
+				.from('custom_courses')
+				.update({ is_published: false })
+				.eq('id', params.courseId)
+				.eq('creator_id', user.id);
+		}
+
 		return { success: true };
 	},
 

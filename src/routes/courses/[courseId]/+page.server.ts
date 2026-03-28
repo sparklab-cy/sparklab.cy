@@ -76,7 +76,18 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 					.eq('permission_type', 'course_access')
 					.maybeSingle();
 
-				if (!userPermissions) {
+				let hasKit = !!userPermissions;
+				if (!hasKit) {
+					const { data: uk } = await supabase
+						.from('user_kits')
+						.select('kit_id')
+						.eq('user_id', user.id)
+						.eq('kit_id', customCourse.kit_id)
+						.maybeSingle();
+					hasKit = !!uk;
+				}
+
+				if (!hasKit) {
 					throw redirect(302, `/shop`);
 				}
 			}

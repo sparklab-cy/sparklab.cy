@@ -45,7 +45,9 @@
     {#if libraryCourses && libraryCourses.length > 0}
       <section class="library-section">
         <h2 class="section-title">Courses</h2>
-        <p class="section-sub">From your kits and anything shared with you.</p>
+        <p class="section-sub">
+          Official courses, published public courses for your kits, and courses shared with you.
+        </p>
         <div class="courses-grid">
           {#each libraryCourses as course, idx}
             <a
