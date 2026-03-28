@@ -1,8 +1,7 @@
 import {
 	PUBLIC_SHOPIFY_STORE_DOMAIN,
 	PUBLIC_SHOPIFY_STOREFRONT_TOKEN,
-	PUBLIC_SHOPIFY_API_VERSION,
-	PUBLIC_SHOPIFY_KITS_COLLECTION_HANDLE
+	PUBLIC_SHOPIFY_API_VERSION
 } from '$env/static/public';
 
 const DEFAULT_API_VERSION = '2025-01';
@@ -95,15 +94,11 @@ function mapCatalogProduct(node: CatalogProductGql): ShopifyCatalogProduct | nul
 	};
 }
 
-/**
- * All purchasable products for the storefront shop page.
- * Uses `PUBLIC_SHOPIFY_KITS_COLLECTION_HANDLE` when set; otherwise lists all products (paginated).
- */
+/** All purchasable products for the storefront shop page (paginated). */
 export async function fetchCatalogProducts(): Promise<ShopifyCatalogProduct[]> {
 	if (!isShopifyConfigured()) return [];
 
 	const out: ShopifyCatalogProduct[] = [];
-	const collectionHandle = PUBLIC_SHOPIFY_KITS_COLLECTION_HANDLE?.trim();
 
 	const catalogNodeFields = `
 							id
@@ -122,40 +117,6 @@ export async function fetchCatalogProducts(): Promise<ShopifyCatalogProduct[]> {
 							}
 						}
 						`;
-
-	type CatalogCollectionData = {
-		collection: {
-			products: {
-				pageInfo: { hasNextPage: boolean; endCursor: string | null };
-				edges: { node: CatalogProductGql }[];
-			};
-		} | null;
-	};
-
-	if (collectionHandle) {
-		let cursor: string | null = null;
-		for (let i = 0; i < 15; i++) {
-			const res = (await storefrontQuery<CatalogCollectionData>({
-				query:
-					'query CatalogInCollection($handle: String!, $cursor: String) { collection(handle: $handle) { products(first: 50, after: $cursor) { pageInfo { hasNextPage endCursor } edges { node { ' +
-					catalogNodeFields +
-					'} } } }',
-				variables: { handle: collectionHandle, cursor }
-			})) as { data?: CatalogCollectionData; errors?: { message: string }[] };
-			if (res.errors?.length) throw new Error(res.errors.map((e: { message: string }) => e.message).join('; '));
-			const col = res.data?.collection;
-			const edges = col?.products?.edges ?? [];
-			for (const edge of edges) {
-				const m = mapCatalogProduct(edge.node);
-				if (m) out.push(m);
-			}
-			const pinfo = col?.products?.pageInfo;
-			if (!pinfo?.hasNextPage) break;
-			cursor = pinfo.endCursor;
-			if (!cursor) break;
-		}
-		return out;
-	}
 
 	type CatalogAllData = {
 		products: {
@@ -356,54 +317,6 @@ export async function fetchShopifyVariantMapForKits(
 			}
 		}
 	};
-
-	type CollectionSkuQuery = {
-		collection: {
-			products: {
-				pageInfo: { hasNextPage: boolean; endCursor: string | null };
-				edges: { node: ProductNode }[];
-			};
-		} | null;
-	};
-
-	const collectionHandle = PUBLIC_SHOPIFY_KITS_COLLECTION_HANDLE?.trim();
-	if (collectionHandle) {
-		let cursor: string | null = null;
-		for (let page = 0; page < 20; page++) {
-			const res = (await storefrontQuery<CollectionSkuQuery>({
-				query: `
-					query CollectionProducts($handle: String!, $cursor: String) {
-						collection(handle: $handle) {
-							products(first: 50, after: $cursor) {
-								pageInfo { hasNextPage endCursor }
-								edges {
-									node {
-										variants(first: 100) {
-											edges {
-												node { id sku price { amount currencyCode } image { url } }
-											}
-										}
-									}
-								}
-							}
-						}
-					}
-				`,
-				variables: { handle: collectionHandle, cursor }
-			})) as { data?: CollectionSkuQuery; errors?: { message: string }[] };
-			if (res.errors?.length) throw new Error(res.errors.map((e: { message: string }) => e.message).join('; '));
-			const gqlData: CollectionSkuQuery | undefined = res.data;
-			const col = gqlData?.collection;
-			const edges = col?.products?.edges ?? [];
-			if (!edges.length) break;
-			accumulate(edges.map((edge: { node: ProductNode }) => edge.node));
-			const pinfo = col?.products?.pageInfo;
-			if (!pinfo?.hasNextPage || map.size >= kitIds.length) break;
-			cursor = pinfo.endCursor;
-			if (!cursor) break;
-		}
-		return map;
-	}
 
 	type AllProductsSkuQuery = {
 		products: {
