@@ -18,6 +18,11 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		}
 	});
 
+	console.log('data', data);
+	console.log('error', error);
+	console.log('url', url.origin);
+	console.log('redirectUrl', redirectUrl);
+	
 	if (error || !data?.url) {
 		throw redirect(303, '/login');
 	}
