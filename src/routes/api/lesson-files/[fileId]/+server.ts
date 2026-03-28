@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { isTeacherOrAdminRole } from '$lib/server/courseAuthoringAccess';
 
 export const DELETE: RequestHandler = async ({ params, locals }) => {
 	const { user, supabase } = locals;
@@ -28,10 +29,14 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 		.eq('id', user.id)
 		.single();
 
-	const isAdmin = profile?.role === 'admin';
+	const role = profile?.role;
+	const isAdmin = role === 'admin';
 	const lesson = lessonFile.lessons as { course_id: string; course_type: string } | null;
 
 	if (lesson?.course_type === 'custom') {
+		if (!isTeacherOrAdminRole(role)) {
+			return json({ error: 'Forbidden' }, { status: 403 });
+		}
 		const { data: course } = await supabase
 			.from('custom_courses')
 			.select('creator_id')

@@ -107,7 +107,7 @@
                     Manage Lessons
                   </a>
                   {#if course.is_published}
-                    <a href="/courses/community/{course.id}" class="btn-secondary">
+                    <a href="/courses/{course.id}" class="btn-secondary">
                       View
                     </a>
                   {/if}

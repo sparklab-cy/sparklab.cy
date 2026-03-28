@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { compile } from 'svelte/compiler';
+import { isTeacherOrAdminRole } from '$lib/server/courseAuthoringAccess';
 
 const VIDEO_EXTENSIONS = new Set(['mp4', 'webm', 'ogg', 'mov', 'avi']);
 
@@ -60,9 +61,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		.eq('id', user.id)
 		.single();
 
-	const isAdmin = profile?.role === 'admin';
+	const role = profile?.role;
+	const isAdmin = role === 'admin';
 
 	if (lesson.course_type === 'custom') {
+		if (!isTeacherOrAdminRole(role)) {
+			return json({ error: 'Forbidden' }, { status: 403 });
+		}
 		const { data: course } = await supabase
 			.from('custom_courses')
 			.select('creator_id')

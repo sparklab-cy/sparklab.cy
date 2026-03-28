@@ -1,8 +1,16 @@
 import type { PageServerLoad, Actions } from './$types';
 import { redirect } from '@sveltejs/kit';
 
+function noticeFromQuery(errorParam: string | null): string | null {
+  if (errorParam === 'access_denied') {
+    return 'You do not have access to that course.';
+  }
+  return null;
+}
+
 export const load: PageServerLoad = async ({ url, locals, parent }) => {
   const selectedKit = url.searchParams.get('kit');
+  const urlNotice = noticeFromQuery(url.searchParams.get('error'));
   const { user, supabase } = locals;
 
   const parentData = await parent();
@@ -94,15 +102,19 @@ export const load: PageServerLoad = async ({ url, locals, parent }) => {
       }
     }
 
+    const libraryCourses = [...invitedCommunityCourses, ...(officialCourses || [])];
+
     return {
       kits: kits || [],
       officialCourses: officialCourses || [],
       invitedCommunityCourses,
+      libraryCourses,
       userCourses,
       selectedKit,
       userKits,
       userRole,
       canCreateCourses: isTeacherOrAdmin && userKits.length > 0,
+      urlNotice,
       error: null
     };
 
@@ -112,11 +124,13 @@ export const load: PageServerLoad = async ({ url, locals, parent }) => {
       kits: [],
       officialCourses: [],
       invitedCommunityCourses: [],
+      libraryCourses: [],
       userCourses: [],
       selectedKit,
       userKits: [],
       userRole,
       canCreateCourses: false,
+      urlNotice,
       error: 'Failed to load courses'
     };
   }

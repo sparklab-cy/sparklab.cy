@@ -156,7 +156,7 @@
             
             <div class="course-footer">
               {#if hasKitAccess(course.kit_id)}
-                <a href="/courses/community/{course.id}" class="access-btn">Access Course</a>
+                <a href="/courses/{course.id}" class="access-btn">Access Course</a>
               {:else}
                 <div class="kit-required">
                   <p>Requires {course.kits?.name} kit</p>

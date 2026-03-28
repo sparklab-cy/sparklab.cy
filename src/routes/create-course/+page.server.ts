@@ -1,12 +1,11 @@
 import type { PageServerLoad, Actions } from './$types';
 import { redirect } from '@sveltejs/kit';
+import { getAuthoringForbiddenMessage } from '$lib/server/courseAuthoringAccess';
 
 export const load: PageServerLoad = async ({ locals }) => {
   const { user, supabase } = locals;
-  
-  if (!user) {
-    throw redirect(302, '/login');
-  }
+
+  if (!user) throw redirect(302, '/login');
 
   try {
     // Load user's kits (kits they have access to)
@@ -59,6 +58,9 @@ export const actions: Actions = {
     if (!user) {
       return { success: false, error: 'Please log in to create courses' };
     }
+
+    const forbidden = await getAuthoringForbiddenMessage(supabase, user.id);
+    if (forbidden) return { success: false, error: forbidden };
 
     try {
       const formData = await request.formData();
@@ -116,6 +118,9 @@ export const actions: Actions = {
       return { success: false, error: 'Please log in to update courses' };
     }
 
+    const forbidden = await getAuthoringForbiddenMessage(supabase, user.id);
+    if (forbidden) return { success: false, error: forbidden };
+
     try {
       const formData = await request.formData();
       const courseId = formData.get('courseId') as string;
@@ -170,6 +175,9 @@ export const actions: Actions = {
       return { success: false, error: 'Please log in to create lessons' };
     }
 
+    const forbidden = await getAuthoringForbiddenMessage(supabase, user.id);
+    if (forbidden) return { success: false, error: forbidden };
+
     try {
       const formData = await request.formData();
       const courseId = formData.get('courseId') as string;
@@ -222,6 +230,9 @@ export const actions: Actions = {
     if (!user) {
       return { success: false, error: 'Please log in' };
     }
+
+    const forbidden = await getAuthoringForbiddenMessage(supabase, user.id);
+    if (forbidden) return { success: false, error: forbidden };
 
     try {
       const formData = await request.formData();

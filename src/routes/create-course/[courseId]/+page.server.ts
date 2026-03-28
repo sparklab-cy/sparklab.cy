@@ -1,14 +1,13 @@
 import { redirect, error } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { getAuthUserIdByEmail } from '$lib/server/supabaseAdmin';
+import { getAuthoringForbiddenMessage } from '$lib/server/courseAuthoringAccess';
 
 export const load: PageServerLoad = async ({ params, locals, url }) => {
 	const { courseId } = params;
 	const { user, supabase } = locals;
 
-	if (!user) {
-		throw redirect(302, '/login');
-	}
+	if (!user) throw redirect(302, '/login');
 
 	// Load the course and verify creator ownership
 	const { data: course, error: courseError } = await supabase
@@ -83,6 +82,9 @@ export const actions: Actions = {
 		const { user, supabase } = locals;
 		if (!user) return { success: false, error: 'Unauthorized' };
 
+		const forbidden = await getAuthoringForbiddenMessage(supabase, user.id);
+		if (forbidden) return { success: false, error: forbidden };
+
 		const formData = await request.formData();
 		const title = formData.get('title') as string;
 		const orderIndex = parseInt((formData.get('order_index') as string) ?? '1', 10);
@@ -121,6 +123,9 @@ export const actions: Actions = {
 		const { user, supabase } = locals;
 		if (!user) return { success: false, error: 'Unauthorized' };
 
+		const forbidden = await getAuthoringForbiddenMessage(supabase, user.id);
+		if (forbidden) return { success: false, error: forbidden };
+
 		const formData = await request.formData();
 		const lessonId = formData.get('lessonId') as string;
 
@@ -140,6 +145,9 @@ export const actions: Actions = {
 	publishLesson: async ({ request, params, locals }) => {
 		const { user, supabase } = locals;
 		if (!user) return { success: false, error: 'Unauthorized' };
+
+		const forbidden = await getAuthoringForbiddenMessage(supabase, user.id);
+		if (forbidden) return { success: false, error: forbidden };
 
 		const formData = await request.formData();
 		const lessonId = formData.get('lessonId') as string;
@@ -165,6 +173,9 @@ export const actions: Actions = {
 		const { user, supabase } = locals;
 		if (!user) return { success: false, error: 'Unauthorized' };
 
+		const forbidden = await getAuthoringForbiddenMessage(supabase, user.id);
+		if (forbidden) return { success: false, error: forbidden };
+
 		const formData = await request.formData();
 		const lessonId = formData.get('lessonId') as string;
 
@@ -188,6 +199,9 @@ export const actions: Actions = {
 	grantAccess: async ({ request, params, locals }) => {
 		const { user, supabase } = locals;
 		if (!user) return { success: false, error: 'Unauthorized' };
+
+		const forbidden = await getAuthoringForbiddenMessage(supabase, user.id);
+		if (forbidden) return { success: false, error: forbidden };
 
 		const formData = await request.formData();
 		const email = (formData.get('email') as string)?.trim().toLowerCase();
@@ -232,6 +246,9 @@ export const actions: Actions = {
 		const { user, supabase } = locals;
 		if (!user) return { success: false, error: 'Unauthorized' };
 
+		const forbidden = await getAuthoringForbiddenMessage(supabase, user.id);
+		if (forbidden) return { success: false, error: forbidden };
+
 		const formData = await request.formData();
 		const grantId = formData.get('grantId') as string;
 
@@ -256,6 +273,9 @@ export const actions: Actions = {
 		const { user, supabase } = locals;
 		if (!user) return { success: false, error: 'Unauthorized' };
 
+		const forbidden = await getAuthoringForbiddenMessage(supabase, user.id);
+		if (forbidden) return { success: false, error: forbidden };
+
 		const { data: course } = await supabase
 			.from('custom_courses')
 			.select('creator_id')
@@ -279,6 +299,9 @@ export const actions: Actions = {
 	toggleLessonVisibility: async ({ request, params, locals }) => {
 		const { user, supabase } = locals;
 		if (!user) return { success: false, error: 'Unauthorized' };
+
+		const forbidden = await getAuthoringForbiddenMessage(supabase, user.id);
+		if (forbidden) return { success: false, error: forbidden };
 
 		const formData = await request.formData();
 		const userId = formData.get('userId') as string;

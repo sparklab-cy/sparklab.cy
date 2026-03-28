@@ -19,3 +19,25 @@ export function getSupabaseAdmin(): SupabaseClient | null {
 export function isSupabaseAdminConfigured(): boolean {
 	return Boolean(getSupabaseAdmin());
 }
+
+/**
+ * Resolve auth user id by email (RPC `get_user_id_by_email`, service_role only).
+ * Returns null if admin client is missing, RPC errors, or no user found.
+ */
+export async function getAuthUserIdByEmail(email: string): Promise<string | null> {
+	const admin = getSupabaseAdmin();
+	const trimmed = email?.trim().toLowerCase();
+	if (!admin || !trimmed) return null;
+
+	const { data, error } = await admin.rpc('get_user_id_by_email', {
+		lookup_email: trimmed
+	});
+
+	if (error) {
+		console.error('get_user_id_by_email RPC:', error);
+		return null;
+	}
+
+	if (data == null) return null;
+	return typeof data === 'string' ? data : String(data);
+}

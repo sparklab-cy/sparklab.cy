@@ -59,5 +59,5 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		}
 	}
 
-	throw redirect(302, `/courses/community/${course.id}`);
+	throw redirect(302, `/courses/${course.id}`);
 };

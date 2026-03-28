@@ -8,12 +8,11 @@
     lessons: Lesson[];
     currentLesson: Lesson;
     userProgress: UserProgress[];
-    courseType: string;
     courseId: string;
     children: Snippet;
   }
 
-  const { lessons, currentLesson, userProgress, courseType, courseId, children }: Props = $props();
+  const { lessons, currentLesson, userProgress, courseId, children }: Props = $props();
   
   const currentPath = $derived(page.url.pathname);
   
@@ -35,8 +34,8 @@
     return currentIndex < lessons.length - 1 ? lessons[currentIndex + 1] : null;
   }
   
-  function getLessonUrl(lesson: Lesson): string {
-    return `/courses/${courseType}/${courseId}/lessons/${lesson.id}`;
+  function getLessonUrl(_lesson: Lesson): string {
+    return `/courses/${courseId}`;
   }
 </script>
 

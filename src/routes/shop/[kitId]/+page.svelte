@@ -1,6 +1,5 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
-  import type { OfficialCourse, CustomCourse } from '$lib/types/courses';
   import { cart } from '$lib/stores/cart';
   
   const { data } = $props();
@@ -145,7 +144,7 @@
           <div class="owned-message">
             <h3>You own this kit!</h3>
             <p>Access your courses and start building.</p>
-            <a href="/courses/official/{kit.id}" class="access-btn">View Courses</a>
+            <a href="/courses?kit={kit.id}" class="access-btn">View Courses</a>
           </div>
         {:else}
           <div class="quantity-selector">
@@ -189,57 +188,46 @@
   <!-- Courses Section -->
   <div class="courses-section">
     <h2>Available Courses</h2>
-    
-    {#if officialCourses.length > 0}
-      <div class="courses-subsection">
-        <h3>Official Courses</h3>
-        <div class="courses-grid">
-          {#each officialCourses as course}
-            <div class="course-card">
-              <h4>{course.title}</h4>
-              <p>{course.description}</p>
+
+    {#if officialCourses.length > 0 || communityCourses.length > 0}
+      <div class="courses-grid">
+        {#each officialCourses as course}
+          <div class="course-card">
+            <h4>{course.title}</h4>
+            <p>{course.description}</p>
+            {#if course.estimated_duration}
+              <span class="duration">{course.estimated_duration} min</span>
+            {/if}
+            {#if hasAccess}
+              <a href="/courses/{course.id}" class="course-btn">Open course</a>
+            {:else}
+              <span class="requires-kit">Requires kit purchase</span>
+            {/if}
+          </div>
+        {/each}
+        {#each communityCourses as course}
+          <div class="course-card">
+            <h4>{course.title}</h4>
+            <p>{course.description}</p>
+            <div class="course-meta">
               {#if course.estimated_duration}
                 <span class="duration">{course.estimated_duration} min</span>
               {/if}
-              {#if hasAccess}
-                <a href="/courses/official/{kit.id}/lessons/{course.id}" class="course-btn">Start Course</a>
-              {:else}
-                <span class="requires-kit">Requires kit purchase</span>
-              {/if}
-            </div>
-          {/each}
-        </div>
-      </div>
-    {/if}
-    
-    {#if communityCourses.length > 0}
-      <div class="courses-subsection">
-        <h3>Community Courses</h3>
-        <div class="courses-grid">
-          {#each communityCourses as course}
-            <div class="course-card">
-              <h4>{course.title}</h4>
-              <p>{course.description}</p>
-              <div class="course-meta">
-                {#if course.estimated_duration}
-                  <span class="duration">{course.estimated_duration} min</span>
+              <span class="price">
+                {#if course.price > 0}
+                  ${course.price}
+                {:else}
+                  Free
                 {/if}
-                <span class="price">
-                  {#if course.price > 0}
-                    ${course.price}
-                  {:else}
-                    Free
-                  {/if}
-                </span>
-              </div>
-              {#if hasAccess}
-                <a href="/courses/community/{course.id}" class="course-btn">Access Course</a>
-              {:else}
-                <span class="requires-kit">Requires kit purchase</span>
-              {/if}
+              </span>
             </div>
-          {/each}
-        </div>
+            {#if hasAccess}
+              <a href="/courses/{course.id}" class="course-btn">Open course</a>
+            {:else}
+              <span class="requires-kit">Requires kit purchase</span>
+            {/if}
+          </div>
+        {/each}
       </div>
     {/if}
   </div>

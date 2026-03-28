@@ -1,17 +1,17 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { enhance } from '$app/forms';
-  import type { Kit, OfficialCourse, CustomCourse } from '$lib/types/courses';
+  import type { Kit } from '$lib/types/courses';
 
   const { data, form } = $props();
   const {
     kits,
-    officialCourses,
-    invitedCommunityCourses,
+    libraryCourses,
     userCourses,
     userKits,
     userRole,
     canCreateCourses,
+    urlNotice,
     error
   } = data;
 
@@ -30,53 +30,35 @@
 
   {#if error}
     <div class="error-banner">{error}</div>
-  {:else if userKitIds.length === 0 && (!invitedCommunityCourses || invitedCommunityCourses.length === 0)}
+  {:else}
+    {#if urlNotice}
+      <div class="error-banner">{urlNotice}</div>
+    {/if}
+
+    {#if userKitIds.length === 0 && (!libraryCourses || libraryCourses.length === 0)}
     <section class="empty-state">
       <h2>No kits yet</h2>
       <p>Purchase a kit to unlock your first courses and start building.</p>
       <a href="/shop" class="cta-btn">Go to Shop</a>
     </section>
-  {:else}
-    {#if invitedCommunityCourses && invitedCommunityCourses.length > 0}
-      <section class="invited-section">
-        <h2 class="section-title">Shared with you</h2>
-        <p class="section-sub">Community courses you were invited to or joined via link.</p>
+    {:else}
+    {#if libraryCourses && libraryCourses.length > 0}
+      <section class="library-section">
+        <h2 class="section-title">Courses</h2>
+        <p class="section-sub">From your kits and anything shared with you.</p>
         <div class="courses-grid">
-          {#each invitedCommunityCourses as course, idx}
+          {#each libraryCourses as course, idx}
             <a
-              href="/courses/community/{course.id}"
+              href="/courses/{course.id}"
               class="course-card animate-in delay-{(idx % 5) + 1}"
             >
               <div class="card-top">
-                {#if course.kits}
+                {#if 'level' in course && course.level != null}
+                  <span class="level-badge">Level {course.level}</span>
+                  <span class="theme-badge">{course.theme}</span>
+                {:else if course.kits}
                   <span class="theme-badge">{Array.isArray(course.kits) ? course.kits[0]?.name : course.kits.name}</span>
                 {/if}
-                <span class="cc-badge invite-only">Community</span>
-              </div>
-              <h2>{course.title}</h2>
-              <p class="course-desc">{course.description}</p>
-              <div class="card-footer">
-                <span class="start-label">Open course</span>
-              </div>
-            </a>
-          {/each}
-        </div>
-      </section>
-    {/if}
-
-    {#if userKitIds.length > 0}
-      {#if officialCourses.length === 0}
-        <section class="empty-state">
-          <h2>No courses available</h2>
-          <p>There are no published courses for your kits yet. Check back soon.</p>
-        </section>
-      {:else}
-        <section class="courses-grid">
-          {#each officialCourses as course, idx}
-            <a href="/courses/official/{course.id}" class="course-card animate-in delay-{(idx % 5) + 1}">
-              <div class="card-top">
-                <span class="level-badge">Level {course.level}</span>
-                <span class="theme-badge">{course.theme}</span>
               </div>
               <h2>{course.title}</h2>
               <p class="course-desc">{course.description}</p>
@@ -84,12 +66,18 @@
                 {#if course.estimated_duration}
                   <span class="duration">{course.estimated_duration} min</span>
                 {/if}
-                <span class="start-label">Start Course</span>
+                <span class="start-label">Open course</span>
               </div>
             </a>
           {/each}
-        </section>
-      {/if}
+        </div>
+      </section>
+    {:else if userKitIds.length > 0}
+      <section class="empty-state">
+        <h2>No courses available</h2>
+        <p>There are no published courses for your kits yet. Check back soon.</p>
+      </section>
+    {/if}
     {/if}
 
     {#if canCreateCourses}
@@ -158,7 +146,7 @@
                 <div class="cc-actions">
                   <a href="/create-course/{course.id}" class="btn-edit">Edit</a>
                   {#if isAdmin && course.is_published}
-                    <a href="/courses/community/{course.id}" class="btn-view">View</a>
+                    <a href="/courses/{course.id}" class="btn-view">View</a>
                   {/if}
                 </div>
               </div>
@@ -239,7 +227,7 @@
     box-shadow: 0 12px 32px rgba(116, 118, 252, 0.25);
   }
 
-  .invited-section {
+  .library-section {
     margin-bottom: 2.5rem;
   }
 
