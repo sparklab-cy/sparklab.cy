@@ -3,6 +3,7 @@
   import { marked } from 'marked';
   import type { LessonFile } from '$lib/types/courses';
   import { PUBLIC_SUPABASE_URL } from '$env/static/public';
+  import { youtubeEmbedSrc } from '$lib/youtube';
 
   const { files }: { files: LessonFile[] } = $props();
   // lessonId is available via files[n].lesson_id if needed
@@ -94,14 +95,21 @@
           {/if}
 
         {:else if activeFile.file_type === 'video'}
+          {@const yt = youtubeEmbedSrc(activeFile.storage_path)}
           <div class="video-wrapper">
-            <!-- svelte-ignore a11y_media_has_caption -->
-            <video
-              controls
-              src={getPublicUrl(activeFile.storage_path)}
-              class="lesson-video"
-            >
-            </video>
+            {#if yt}
+              <div class="iframe-video">
+                <iframe
+                  src={yt}
+                  title={activeFile.file_name}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowfullscreen
+                ></iframe>
+              </div>
+            {:else}
+              <!-- svelte-ignore a11y_media_has_caption -->
+              <video controls src={getPublicUrl(activeFile.storage_path)} class="lesson-video"></video>
+            {/if}
           </div>
 
         {:else if activeFile.file_type === 'svelte'}
@@ -291,6 +299,21 @@
     max-width: 900px;
     border-radius: 8px;
     background: #000;
+  }
+
+  .iframe-video {
+    width: 100%;
+    max-width: 900px;
+    aspect-ratio: 16 / 9;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #000;
+  }
+
+  .iframe-video iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
   }
 
   /* Svelte iframe */

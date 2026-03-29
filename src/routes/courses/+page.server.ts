@@ -48,7 +48,6 @@ export const load: PageServerLoad = async ({ url, locals, parent }) => {
 
       userKits = [...kitIdSet];
     }
-    console.log('userKits', userKits);
 
     let officialCourses: any[] = [];
     

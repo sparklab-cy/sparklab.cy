@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { compile } from 'svelte/compiler';
 import { isTeacherOrAdminRole } from '$lib/server/courseAuthoringAccess';
-
+import { parseYoutubeVideoId } from '$lib/youtube';
 const VIDEO_EXTENSIONS = new Set(['mp4', 'webm', 'ogg', 'mov', 'avi']);
 
 function getFileType(filename: string): 'markdown' | 'video' | 'svelte' | null {
@@ -10,6 +10,46 @@ function getFileType(filename: string): 'markdown' | 'video' | 'svelte' | null {
 	if (ext === 'md') return 'markdown';
 	if (ext === 'svelte') return 'svelte';
 	if (VIDEO_EXTENSIONS.has(ext)) return 'video';
+	return null;
+}
+
+async function requireLessonUploadAccess(
+	supabase: App.Locals['supabase'],
+	userId: string,
+	lessonId: string
+): Promise<Response | null> {
+	const { data: lesson, error: lessonError } = await supabase
+		.from('lessons')
+		.select('id, course_id, course_type')
+		.eq('id', lessonId)
+		.single();
+
+	if (lessonError || !lesson) {
+		return json({ error: 'Lesson not found' }, { status: 404 });
+	}
+
+	const { data: profile } = await supabase.from('profiles').select('role').eq('id', userId).single();
+
+	const role = profile?.role;
+	const isAdmin = role === 'admin';
+
+	if (lesson.course_type === 'custom') {
+		if (!isTeacherOrAdminRole(role)) {
+			return json({ error: 'Forbidden' }, { status: 403 });
+		}
+		const { data: course } = await supabase
+			.from('custom_courses')
+			.select('creator_id')
+			.eq('id', lesson.course_id)
+			.single();
+
+		if (!isAdmin && course?.creator_id !== userId) {
+			return json({ error: 'Forbidden' }, { status: 403 });
+		}
+	} else if (!isAdmin) {
+		return json({ error: 'Forbidden' }, { status: 403 });
+	}
+
 	return null;
 }
 
@@ -29,10 +69,55 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 	const lessonId = formData.get('lesson_id') as string;
 	const tabOrder = parseInt((formData.get('tab_order') as string) ?? '0', 10);
+	const youtubeUrl = ((formData.get('youtube_url') as string) ?? '').trim();
 	const file = formData.get('file') as File | null;
 
-	if (!lessonId || !file) {
-		return json({ error: 'lesson_id and file are required' }, { status: 400 });
+	if (!lessonId) {
+		return json({ error: 'lesson_id is required' }, { status: 400 });
+	}
+
+	if (youtubeUrl) {
+		if (file?.size) {
+			return json({ error: 'Send either a file or youtube_url, not both' }, { status: 400 });
+		}
+		const videoId = parseYoutubeVideoId(youtubeUrl);
+		if (!videoId) {
+			return json({ error: 'Invalid or unsupported YouTube URL' }, { status: 400 });
+		}
+
+		const denied = await requireLessonUploadAccess(supabase, user.id, lessonId);
+		if (denied) return denied;
+
+		const fileId = crypto.randomUUID();
+		const storagePath = `youtube:${videoId}`;
+
+		const { data: lessonFile, error: dbError } = await supabase
+			.from('lesson_files')
+			.insert({
+				id: fileId,
+				lesson_id: lessonId,
+				file_name: 'YouTube',
+				file_type: 'video',
+				storage_path: storagePath,
+				compiled_path: null,
+				tab_order: tabOrder
+			})
+			.select()
+			.single();
+
+		if (dbError) {
+			console.error('DB insert error (youtube):', dbError);
+			return json({ error: 'Failed to save video record' }, { status: 500 });
+		}
+
+		return json(lessonFile, { status: 201 });
+	}
+
+	if (!file?.size) {
+		return json(
+			{ error: 'Provide a file or youtube_url' },
+			{ status: 400 }
+		);
 	}
 
 	const fileType = getFileType(file.name);
@@ -43,43 +128,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		);
 	}
 
-	// Verify the user has permission to upload to this lesson
-	const { data: lesson, error: lessonError } = await supabase
-		.from('lessons')
-		.select('id, course_id, course_type')
-		.eq('id', lessonId)
-		.single();
-
-	if (lessonError || !lesson) {
-		return json({ error: 'Lesson not found' }, { status: 404 });
-	}
-
-	// Check ownership: admin can upload to official courses, creator to their own custom courses
-	const { data: profile } = await supabase
-		.from('profiles')
-		.select('role')
-		.eq('id', user.id)
-		.single();
-
-	const role = profile?.role;
-	const isAdmin = role === 'admin';
-
-	if (lesson.course_type === 'custom') {
-		if (!isTeacherOrAdminRole(role)) {
-			return json({ error: 'Forbidden' }, { status: 403 });
-		}
-		const { data: course } = await supabase
-			.from('custom_courses')
-			.select('creator_id')
-			.eq('id', lesson.course_id)
-			.single();
-
-		if (!isAdmin && course?.creator_id !== user.id) {
-			return json({ error: 'Forbidden' }, { status: 403 });
-		}
-	} else if (!isAdmin) {
-		return json({ error: 'Forbidden' }, { status: 403 });
-	}
+	const denied = await requireLessonUploadAccess(supabase, user.id, lessonId);
+	if (denied) return denied;
 
 	const fileId = crypto.randomUUID();
 	const storagePath = `${lessonId}/${fileId}/${file.name}`;

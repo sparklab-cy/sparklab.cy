@@ -50,19 +50,22 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 		return json({ error: 'Forbidden' }, { status: 403 });
 	}
 
-	// Remove files from Supabase Storage
-	const pathsToRemove: string[] = [lessonFile.storage_path];
-	if (lessonFile.compiled_path) {
-		pathsToRemove.push(lessonFile.compiled_path);
-	}
+	// Remove files from Supabase Storage (YouTube tabs have no stored file)
+	const isYoutube = lessonFile.storage_path.startsWith('youtube:');
+	if (!isYoutube) {
+		const pathsToRemove: string[] = [lessonFile.storage_path];
+		if (lessonFile.compiled_path) {
+			pathsToRemove.push(lessonFile.compiled_path);
+		}
 
-	const { error: storageError } = await supabase.storage
-		.from('lesson-files')
-		.remove(pathsToRemove);
+		const { error: storageError } = await supabase.storage
+			.from('lesson-files')
+			.remove(pathsToRemove);
 
-	if (storageError) {
-		console.error('Storage delete error:', storageError);
-		// Continue with DB deletion even if storage cleanup fails
+		if (storageError) {
+			console.error('Storage delete error:', storageError);
+			// Continue with DB deletion even if storage cleanup fails
+		}
 	}
 
 	// Delete the DB row (CASCADE will handle orphan cleanup)

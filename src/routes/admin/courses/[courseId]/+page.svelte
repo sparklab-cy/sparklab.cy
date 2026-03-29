@@ -12,6 +12,7 @@
   let lessonFilesMap = $state<Record<string, LessonFile[]>>(initialFilesMap ?? {});
   let uploadingFor = $state<string | null>(null);
   let uploadError = $state<Record<string, string>>({});
+  let youtubeDraftByLesson = $state<Record<string, string>>({});
 
   function createNewLesson() {
     showCreateLesson = true;
@@ -79,6 +80,38 @@
     } finally {
       uploadingFor = null;
       input.value = '';
+    }
+  }
+
+  async function addYoutubeVideo(lessonId: string) {
+    const url = (youtubeDraftByLesson[lessonId] ?? '').trim();
+    if (!url) return;
+
+    uploadingFor = lessonId;
+    uploadError = { ...uploadError, [lessonId]: '' };
+
+    const existingFiles = lessonFilesMap[lessonId] ?? [];
+    const formData = new FormData();
+    formData.append('lesson_id', lessonId);
+    formData.append('youtube_url', url);
+    formData.append('tab_order', String(existingFiles.length));
+
+    try {
+      const res = await fetch('/api/lesson-files', { method: 'POST', body: formData });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? 'Add failed');
+      lessonFilesMap = {
+        ...lessonFilesMap,
+        [lessonId]: [...existingFiles, json]
+      };
+      youtubeDraftByLesson = { ...youtubeDraftByLesson, [lessonId]: '' };
+    } catch (err) {
+      uploadError = {
+        ...uploadError,
+        [lessonId]: err instanceof Error ? err.message : 'Add failed'
+      };
+    } finally {
+      uploadingFor = null;
     }
   }
 
@@ -205,12 +238,35 @@
                       </label>
                     </div>
 
+                    <div class="youtube-add-row">
+                      <input
+                        type="url"
+                        class="youtube-url-input"
+                        placeholder="YouTube link"
+                        value={youtubeDraftByLesson[lesson.id] ?? ''}
+                        oninput={(e) => {
+                          const v = (e.target as HTMLInputElement).value;
+                          youtubeDraftByLesson = { ...youtubeDraftByLesson, [lesson.id]: v };
+                        }}
+                        disabled={uploadingFor === lesson.id}
+                        onkeydown={(e) => e.key === 'Enter' && addYoutubeVideo(lesson.id)}
+                      />
+                      <button
+                        type="button"
+                        class="btn-youtube-add"
+                        onclick={() => addYoutubeVideo(lesson.id)}
+                        disabled={uploadingFor === lesson.id || !(youtubeDraftByLesson[lesson.id] ?? '').trim()}
+                      >
+                        Add YouTube
+                      </button>
+                    </div>
+
                     {#if uploadError[lesson.id]}
                       <p class="upload-error">{uploadError[lesson.id]}</p>
                     {/if}
 
                     {#if (lessonFilesMap[lesson.id] ?? []).length === 0}
-                      <p class="no-files-hint">No files yet. Upload a .md, .svelte, or video file.</p>
+                      <p class="no-files-hint">No files yet. Upload a file or add a YouTube link above.</p>
                     {:else}
                       <ul class="file-list">
                         {#each lessonFilesMap[lesson.id] as file}
@@ -812,6 +868,40 @@
 
   .upload-label:hover {
     opacity: 0.88;
+  }
+
+  .youtube-add-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 0.75rem;
+  }
+
+  .youtube-url-input {
+    flex: 1;
+    min-width: 180px;
+    padding: 6px 10px;
+    border: 1px solid var(--border, #ddd);
+    border-radius: 4px;
+    font-size: 0.875rem;
+  }
+
+  .btn-youtube-add {
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: none;
+    background: #c00;
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .btn-youtube-add:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
   }
 
   .file-input-hidden {

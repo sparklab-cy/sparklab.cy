@@ -2,6 +2,7 @@
   import { enhance } from '$app/forms';
   import { PUBLIC_SUPABASE_URL } from '$env/static/public';
   import type { Lesson, LessonFile, CourseAccessGrant } from '$lib/types/courses';
+  import { youtubeEmbedSrc } from '$lib/youtube';
 
   const { data, form } = $props();
   const {
@@ -32,6 +33,7 @@
 
   let uploadingFor = $state<string | null>(null);
   let uploadError = $state<Record<string, string>>({});
+  let youtubeUrlDraft = $state('');
 
   let grantEmail = $state('');
   let grantError = $state('');
@@ -54,6 +56,7 @@
   $effect(() => {
     selectedLessonId; // track
     activeTabIndex = 0;
+    youtubeUrlDraft = '';
   });
 
   // ── Storage URL helper ────────────────────────────────────────────
@@ -121,6 +124,34 @@
     } finally {
       uploadingFor = null;
       input.value = '';
+    }
+  }
+
+  async function addYoutubeVideo(lessonId: string) {
+    const url = youtubeUrlDraft.trim();
+    if (!url) return;
+
+    uploadingFor = lessonId;
+    uploadError = { ...uploadError, [lessonId]: '' };
+
+    const existing = lessonFilesMap[lessonId] ?? [];
+    const formData = new FormData();
+    formData.append('lesson_id', lessonId);
+    formData.append('youtube_url', url);
+    formData.append('tab_order', String(existing.length));
+
+    try {
+      const res = await fetch('/api/lesson-files', { method: 'POST', body: formData });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? 'Add failed');
+      const updated = { ...lessonFilesMap, [lessonId]: [...existing, json] };
+      lessonFilesMap = updated;
+      activeTabIndex = updated[lessonId].length - 1;
+      youtubeUrlDraft = '';
+    } catch (err) {
+      uploadError = { ...uploadError, [lessonId]: err instanceof Error ? err.message : 'Add failed' };
+    } finally {
+      uploadingFor = null;
     }
   }
 
@@ -433,6 +464,25 @@
           </label>
         </div>
 
+        <div class="youtube-add-row">
+          <input
+            type="url"
+            class="youtube-url-input"
+            placeholder="Paste YouTube link (watch, embed, Shorts…)"
+            bind:value={youtubeUrlDraft}
+            disabled={uploadingFor === selectedLesson.id}
+            onkeydown={(e) => e.key === 'Enter' && addYoutubeVideo(selectedLesson.id)}
+          />
+          <button
+            type="button"
+            class="btn-youtube-add"
+            onclick={() => addYoutubeVideo(selectedLesson.id)}
+            disabled={uploadingFor === selectedLesson.id || !youtubeUrlDraft.trim()}
+          >
+            Add YouTube
+          </button>
+        </div>
+
         {#if uploadError[selectedLesson.id]}
           <p class="upload-err">{uploadError[selectedLesson.id]}</p>
         {/if}
@@ -442,7 +492,7 @@
           {#if selectedFiles.length === 0}
             <div class="empty-tab">
               <p>No files yet for this lesson.</p>
-              <p class="empty-hint">Click <strong>+</strong> in the tab bar to upload a <code>.md</code>, <code>.svelte</code>, or video file.</p>
+              <p class="empty-hint">Use <strong>+</strong> for a file, or paste a YouTube link and click <strong>Add YouTube</strong>.</p>
             </div>
           {:else if activeFile}
             {#if activeFile.file_type === 'markdown'}
@@ -456,9 +506,21 @@
               {/if}
 
             {:else if activeFile.file_type === 'video'}
+              {@const yt = youtubeEmbedSrc(activeFile.storage_path)}
               <div class="video-wrapper">
-                <!-- svelte-ignore a11y_media_has_caption -->
-                <video controls src={storageUrl(activeFile.storage_path)} class="preview-video"></video>
+                {#if yt}
+                  <div class="iframe-video">
+                    <iframe
+                      src={yt}
+                      title={activeFile.file_name}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowfullscreen
+                    ></iframe>
+                  </div>
+                {:else}
+                  <!-- svelte-ignore a11y_media_has_caption -->
+                  <video controls src={storageUrl(activeFile.storage_path)} class="preview-video"></video>
+                {/if}
               </div>
 
             {:else if activeFile.file_type === 'svelte'}
@@ -1004,6 +1066,43 @@
   .tab-upload-btn:hover { opacity: 0.85; }
   .uploading-text { font-size: 0.75rem; font-style: italic; }
 
+  .youtube-add-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.5rem 1rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .youtube-url-input {
+    flex: 1;
+    min-width: 200px;
+    padding: 0.45rem 0.65rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.875rem;
+    background: var(--color-background);
+    color: var(--color-text);
+  }
+
+  .btn-youtube-add {
+    padding: 0.45rem 0.85rem;
+    border-radius: 6px;
+    border: none;
+    background: #c00;
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .btn-youtube-add:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
   .file-input-hidden {
     position: absolute;
     inset: 0;
@@ -1081,6 +1180,21 @@
 
   .video-wrapper { display: flex; justify-content: center; padding: 1rem 0; }
   .preview-video { width: 100%; max-width: 900px; border-radius: 8px; }
+
+  .iframe-video {
+    width: 100%;
+    max-width: 900px;
+    aspect-ratio: 16 / 9;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #000;
+  }
+
+  .iframe-video iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
 
   .iframe-wrapper { width: 100%; }
   .preview-iframe {
